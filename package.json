@@ -1,0 +1,49 @@
+{
+  "name": "@fortify/setup",
+  "version": "0.0.0",
+  "description": "Bootstrap and run fcli fortify-setup action in any environment",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "fortify-setup": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json && chmod +x dist/cli.js",
+    "clean": "rm -rf dist",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "fortify",
+    "fcli",
+    "security",
+    "sast",
+    "dast",
+    "devsecops",
+    "ci-cd",
+    "github-actions"
+  ],
+  "author": "Fortify",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fortify/fortify-setup-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/fortify/fortify-setup-js/issues"
+  },
+  "homepage": "https://github.com/fortify/fortify-setup-js#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  }
+}

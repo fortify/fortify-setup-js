@@ -1,0 +1,100 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Check version
+        run: |
+          node dist/cli.js --help
+          if [ "$?" -ne 0 ]; then
+            echo "CLI failed to run"
+            exit 1
+          fi
+      
+      - name: Test bootstrap (configure)
+        run: |
+          node dist/cli.js configure --fcli-version=v3 --cache-enabled
+          echo "Configuration test passed"
+      
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  release-please:
+    name: Release Please
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Create Release PR or Publish Release
+        uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          release-type: node
+          package-name: '@fortify/setup'
+      
+      - name: Checkout code (if release created)
+        if: ${{ steps.release.outputs.release_created }}
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js (if release created)
+        if: ${{ steps.release.outputs.release_created }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Install dependencies (if release created)
+        if: ${{ steps.release.outputs.release_created }}
+        run: npm ci
+      
+      - name: Build (if release created)
+        if: ${{ steps.release.outputs.release_created }}
+        run: npm run build
+      
+      # TODO: Uncomment when npm credentials are configured
+      # - name: Publish to npm
+      #   if: ${{ steps.release.outputs.release_created }}
+      #   run: npm publish
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Publish to npm (DISABLED - Configure NPM_TOKEN first)
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          echo "⚠️  npm publishing is disabled"
+          echo "To enable:"
+          echo "  1. Create npm token: https://www.npmjs.com/settings/YOUR_USERNAME/tokens"
+          echo "  2. Add NPM_TOKEN secret to GitHub repository"
+          echo "  3. Uncomment the 'Publish to npm' step in .github/workflows/ci.yml"
+          echo ""
+          echo "Package would be published as: @fortify/setup@${{ steps.release.outputs.version }}"
