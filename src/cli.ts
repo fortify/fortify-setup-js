@@ -31,6 +31,7 @@ COMMANDS
   configure     Configure fcli bootstrap settings
   clear-cache   Clear cached fcli binary
   run [options] Bootstrap fcli and run fortify-setup action (default)
+  env [options] Generate environment variables for installed Fortify tools
 
 Run 'npx @fortify/setup <command> --help' for more information on a command.
 `);
@@ -120,6 +121,48 @@ EXAMPLES
   
   # Show complete fcli action help
   npx @fortify/setup run --fcli-help
+`);
+}
+
+/**
+ * Show env command help
+ */
+function showEnvHelp(): void {
+  console.log(`
+Generate environment variables for installed Fortify tools
+
+Outputs environment variable definitions for installed Fortify tools in various
+formats suitable for sourcing in shells or setting through CI/CD systems.
+
+USAGE
+  npx @fortify/setup env [options]
+  npx @fortify/setup env --fcli-help    Show fcli action help (requires bootstrap)
+
+All options are passed through to the fortify-env action.
+
+BOOTSTRAP BEHAVIOR
+  Bootstrap searches for fcli in the following order:
+  1. Configured path (--fcli-path or FCLI_PATH)
+  2. Environment variables (FCLI, FCLI_CMD, FCLI_HOME)
+  3. PATH (existing fcli command)
+  4. CI/CD tool cache (GitHub Actions, Azure Pipelines, GitLab)
+  5. Download fixed fcli version (with caching)
+
+EXAMPLES
+  # Generate env for all installed tools (shell format)
+  npx @fortify/setup env
+  
+  # Generate env for specific tools with versions
+  npx @fortify/setup env --sc-client-version 24.4.0 --fcli-version latest
+  
+  # Generate env for GitHub Actions
+  npx @fortify/setup env --format github
+  
+  # Use in shell (bash/zsh)
+  source <(npx @fortify/setup env)
+  
+  # Show complete fcli action help
+  npx @fortify/setup env --fcli-help
 `);
 }
 
@@ -226,6 +269,34 @@ async function main(): Promise<void> {
       console.log('Running fortify-setup action...\n');
       
       const cmd = `"${result.fcliPath}" action run fortify-setup ${actionArgs.join(' ')}`;
+      execSync(cmd, { stdio: 'inherit' });
+      
+      process.exit(0);
+    }
+    
+    // Run fortify-env action
+    if (command === 'env') {
+      const actionArgs = args.slice(1);
+      
+      // Show npm-specific help only (no bootstrap required)
+      if (actionArgs.length > 0 && (actionArgs[0] === '--help' || actionArgs[0] === '-h')) {
+        showEnvHelp();
+        process.exit(0);
+      }
+      
+      // Show fcli action help (requires bootstrap)
+      if (actionArgs.length > 0 && actionArgs[0] === '--fcli-help') {
+        console.log('Bootstrapping fcli to show action help...\n');
+        const result = await bootstrapFcli();
+        console.log(`✓ Using fcli ${result.version} (source: ${result.source})\n`);
+        execSync(`"${result.fcliPath}" action help fortify-env`, { stdio: 'inherit' });
+        process.exit(0);
+      }
+      
+      // Run action (no bootstrap messages for clean env output)
+      const result = await bootstrapFcli();
+      
+      const cmd = `"${result.fcliPath}" action run fortify-env ${actionArgs.join(' ')}`;
       execSync(cmd, { stdio: 'inherit' });
       
       process.exit(0);
