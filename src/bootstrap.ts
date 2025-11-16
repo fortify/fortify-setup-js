@@ -9,8 +9,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import * as crypto from 'crypto';
-import type { BootstrapConfig, BootstrapResult, BootstrapOptions, CacheMetadata } from './types.js';
-import { getEffectiveConfig, getCacheDir, getConfigHash, getFcliVersion as getFcliVersionConstant } from './config.js';
+import { pipeline } from 'stream/promises';
+import { ProxyAgent, fetch } from 'undici';
+import { Readable } from 'stream';
+import * as tar from 'tar';
+import * as unzipper from 'unzipper';
+import type { BootstrapConfig, BootstrapResult, BootstrapOptions, DownloadMetadata } from './types.js';
+import { getEffectiveConfig, getTempDir, getConfigHash, getFcliVersion as getFcliVersionConstant, getDefaultConfig } from './config.js';
 
 const execAsync = promisify(exec);
 
@@ -47,24 +52,7 @@ function getFcliBinaryName(): string {
   return os.platform() === 'win32' ? 'fcli.exe' : 'fcli';
 }
 
-/**
- * Check if fcli is available in PATH
- */
-async function checkPath(): Promise<string | null> {
-  try {
-    const cmd = os.platform() === 'win32' ? 'where fcli' : 'which fcli';
-    const { stdout } = await execAsync(cmd);
-    const fcliPath = stdout.trim().split('\n')[0];
-    
-    if (fcliPath && fs.existsSync(fcliPath)) {
-      return fcliPath;
-    }
-  } catch {
-    // Not in PATH
-  }
-  
-  return null;
-}
+
 
 /**
  * Get fcli version from executable
@@ -79,118 +67,127 @@ async function getFcliVersion(fcliPath: string): Promise<string | null> {
   }
 }
 
+
+
 /**
- * Check CI/CD tool cache for fcli (looks for v3.x)
+ * Get proxy agent for HTTP requests based on environment variables
  */
-async function checkToolCache(options: BootstrapOptions): Promise<string | null> {
-  const toolCacheRoot = options.toolCacheDir || 
-    process.env.RUNNER_TOOL_CACHE ||  // GitHub Actions
-    process.env.AGENT_TOOLSDIRECTORY ||  // Azure DevOps
-    process.env.CI_TOOL_CACHE ||  // GitLab CI
-    process.env.TOOL_CACHE;  // Generic
+function getProxyAgent(): ProxyAgent | undefined {
+  const proxy = process.env.HTTPS_PROXY || 
+                process.env.https_proxy || 
+                process.env.HTTP_PROXY || 
+                process.env.http_proxy;
   
-  if (!toolCacheRoot || !fs.existsSync(toolCacheRoot)) {
-    return null;
-  }
-  
-  const fcliToolDir = path.join(toolCacheRoot, 'fcli');
-  if (!fs.existsSync(fcliToolDir)) {
-    return null;
-  }
-  
-  // Look for any v3.x version  
-  const version = getFcliVersionConstant().replace(/^v/, '');
-  const arch = os.arch() === 'x64' ? 'x64' : os.arch();
-  const binaryName = getFcliBinaryName();
-  
-  // Try various tool cache structures
-  const pathVariations = [
-    path.join(fcliToolDir, version, arch, 'bin', binaryName),
-    path.join(fcliToolDir, version, arch, binaryName),
-    path.join(fcliToolDir, version, 'bin', binaryName),
-    path.join(fcliToolDir, version, binaryName)
-  ];
-  
-  for (const fcliPath of pathVariations) {
-    if (fs.existsSync(fcliPath)) {
-      return fcliPath;
-    }
-  }
-  
-  return null;
+  return proxy ? new ProxyAgent(proxy) : undefined;
 }
 
 /**
- * Verify signature using OpenSSL
+ * Verify signature using Node.js crypto module
  */
 async function verifySignature(filePath: string, signaturePath: string): Promise<void> {
-  // Write public key to temp file
-  const tempKeyFile = path.join(os.tmpdir(), 'fortify-public-key.pem');
-  fs.writeFileSync(tempKeyFile, FORTIFY_PUBLIC_KEY);
+  const verifier = crypto.createVerify('RSA-SHA256');
+  const fileStream = fs.createReadStream(filePath);
   
-  try {
-    await execAsync(
-      `openssl dgst -sha256 -verify "${tempKeyFile}" -signature "${signaturePath}" "${filePath}"`,
-      { timeout: 30000 }
-    );
-  } finally {
-    if (fs.existsSync(tempKeyFile)) {
-      fs.unlinkSync(tempKeyFile);
-    }
+  // Stream file through verifier
+  for await (const chunk of fileStream) {
+    verifier.update(chunk);
+  }
+  
+  // Read signature file
+  const signature = fs.readFileSync(signaturePath);
+  
+  // Verify signature
+  if (!verifier.verify(FORTIFY_PUBLIC_KEY, signature)) {
+    throw new Error('Signature verification failed');
   }
 }
 
 /**
- * Download file using curl
+ * Download file using undici with proxy support
  */
 async function downloadFile(url: string, destPath: string): Promise<void> {
-  await execAsync(`curl -fsSL -o "${destPath}" "${url}"`, { timeout: 300000 });
+  const dispatcher = getProxyAgent();
+  
+  const response = await fetch(url, { 
+    dispatcher,
+    redirect: 'follow'
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+  }
+  
+  if (!response.body) {
+    throw new Error('Response body is empty');
+  }
+  
+  // Ensure directory exists
+  const dir = path.dirname(destPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  
+  // Stream response to file
+  const fileStream = fs.createWriteStream(destPath);
+  await pipeline(Readable.fromWeb(response.body as any), fileStream);
 }
 
 /**
- * Extract archive
+ * Extract archive using pure Node.js implementation
  */
 async function extractArchive(archivePath: string, destDir: string): Promise<void> {
-  const isWindows = os.platform() === 'win32';
-  
   if (!fs.existsSync(destDir)) {
     fs.mkdirSync(destDir, { recursive: true });
   }
   
-  if (isWindows) {
-    await execAsync(`tar -xf "${archivePath}" -C "${destDir}"`, { timeout: 60000 });
+  if (archivePath.endsWith('.zip')) {
+    // Extract ZIP using unzipper package
+    await pipeline(
+      fs.createReadStream(archivePath),
+      unzipper.Extract({ path: destDir })
+    );
+  } else if (archivePath.endsWith('.tgz') || archivePath.endsWith('.tar.gz')) {
+    // Extract tar.gz using tar package
+    await tar.extract({
+      file: archivePath,
+      cwd: destDir,
+      strict: true
+    });
   } else {
-    await execAsync(`tar -xzf "${archivePath}" -C "${destDir}"`, { timeout: 60000 });
+    throw new Error(`Unsupported archive format: ${archivePath}`);
   }
 }
 
 /**
- * Download and cache fcli (always latest v3.x)
+ * Download and install fcli (always re-downloads latest v3.x)
  * 
  * Note: Fcli GitHub releases include semantic version tags (v3, v3.6, v3.6.1).
  * Release v3.6.1 has tags v3.6.1, v3.6, and v3 all pointing to same assets.
  * This allows downloading from /v3/ or /v3.6/ URLs for semantic version patterns.
+ * 
+ * The downloaded fcli is stored in an internal cache for use by the env command.
  */
-async function downloadAndCacheFcli(config: BootstrapConfig): Promise<string> {
+async function downloadAndInstallFcli(config: BootstrapConfig): Promise<string> {
   const fcliVersion = getFcliVersionConstant();
+  const defaultConfig = getDefaultConfig();
+  const downloadUrl = config.fcliDownloadUrl || defaultConfig.fcliDownloadUrl!;
   const archiveName = getFcliArchiveName();
-  const downloadUrl = `${config.baseUrl}/${fcliVersion}/${archiveName}`;
-  const cacheDir = getCacheDir(config);
+  const tempDir = getTempDir();
   const configHash = getConfigHash(config);
   
-  // Cache directory structure: {cacheDir}/{configHash}/
-  const versionCacheDir = path.join(cacheDir, configHash);
-  const archivePath = path.join(versionCacheDir, archiveName);
-  const extractDir = path.join(versionCacheDir, 'bin');
+  // Temp directory structure: {tempDir}/{configHash}/
+  const versionTempDir = path.join(tempDir, configHash);
+  const archivePath = path.join(versionTempDir, archiveName);
+  const extractDir = path.join(versionTempDir, 'bin');
   const fcliPath = path.join(extractDir, getFcliBinaryName());
-  const metadataPath = path.join(versionCacheDir, 'metadata.json');
+  const metadataPath = path.join(versionTempDir, 'metadata.json');
   
   // Always download fresh copy to ensure latest version within v3.x
-  // Remove any existing cached copy
-  if (fs.existsSync(versionCacheDir)) {
-    fs.rmSync(versionCacheDir, { recursive: true, force: true });
+  // Remove any existing temp copy
+  if (fs.existsSync(versionTempDir)) {
+    fs.rmSync(versionTempDir, { recursive: true, force: true });
   }
-  fs.mkdirSync(versionCacheDir, { recursive: true });
+  fs.mkdirSync(versionTempDir, { recursive: true });
   
   // Download
   console.log(`Downloading latest fcli ${fcliVersion}.x from ${downloadUrl}...`);
@@ -218,7 +215,7 @@ async function downloadAndCacheFcli(config: BootstrapConfig): Promise<string> {
       console.log('✓ Signature verification successful');
     } catch (error: any) {
       fs.unlinkSync(archivePath);
-      throw new Error(`Signature verification failed: ${error.message}\nIf you trust the source, you can disable verification with: configure --no-verify-signature`);
+      throw new Error(`Signature verification failed: ${error.message}\nIf you trust the source, you can disable verification with: config --no-verify-signature`);
     }
   }
   
@@ -231,8 +228,8 @@ async function downloadAndCacheFcli(config: BootstrapConfig): Promise<string> {
     fs.chmodSync(fcliPath, 0o755);
   }
   
-  // Save metadata
-  const metadata: CacheMetadata = {
+  // Save metadata (for env command access)
+  const metadata: DownloadMetadata = {
     url: downloadUrl,
     version: fcliVersion,
     downloadedAt: new Date().toISOString(),
@@ -240,23 +237,22 @@ async function downloadAndCacheFcli(config: BootstrapConfig): Promise<string> {
   };
   fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
   
-  // Clean up archive if caching disabled
-  if (!config.cacheEnabled) {
-    fs.unlinkSync(archivePath);
-  }
+  // Clean up archive
+  fs.unlinkSync(archivePath);
   
   return fcliPath;
 }
 
 /**
- * Get cached fcli path (for env command after run has been executed)
+ * Get last downloaded fcli path (for env command after run has been executed)
+ * This retrieves the fcli from the temp directory that was downloaded during the last run command.
  */
-export function getCachedFcliPath(config?: BootstrapConfig): string | null {
+export function getLastDownloadedFcliPath(config?: BootstrapConfig): string | null {
   const effectiveConfig = config || getEffectiveConfig();
-  const cacheDir = getCacheDir(effectiveConfig);
+  const tempDir = getTempDir();
   const configHash = getConfigHash(effectiveConfig);
-  const versionCacheDir = path.join(cacheDir, configHash);
-  const extractDir = path.join(versionCacheDir, 'bin');
+  const versionTempDir = path.join(tempDir, configHash);
+  const extractDir = path.join(versionTempDir, 'bin');
   const fcliPath = path.join(extractDir, getFcliBinaryName());
   
   return fs.existsSync(fcliPath) ? fcliPath : null;
@@ -264,6 +260,11 @@ export function getCachedFcliPath(config?: BootstrapConfig): string | null {
 
 /**
  * Bootstrap fcli - main entry point
+ * 
+ * Bootstrap searches for fcli in the following order:
+ * 1. Configured path (via config file or FCLI_PATH env var)
+ * 2. FCLI-specific environment variables (FCLI, FCLI_CMD, FCLI_HOME)
+ * 3. Download latest v3.x (always re-downloads to ensure latest version)
  */
 export async function bootstrapFcli(options: BootstrapOptions = {}): Promise<BootstrapResult> {
   const config = getEffectiveConfig(options);
@@ -282,7 +283,7 @@ export async function bootstrapFcli(options: BootstrapOptions = {}): Promise<Boo
     };
   }
   
-  // 2. Check environment variables for pre-installed fcli
+  // 2. Check FCLI-specific environment variables for pre-installed fcli
   const fcliEnv = process.env.FCLI || process.env.FCLI_CMD || process.env.FCLI_HOME;
   if (fcliEnv) {
     // FCLI_HOME might be a directory, check for binary inside
@@ -301,67 +302,14 @@ export async function bootstrapFcli(options: BootstrapOptions = {}): Promise<Boo
     }
   }
   
-  // 3. Check if fcli is in PATH
-  const pathFcli = await checkPath();
-  if (pathFcli) {
-    const version = await getFcliVersion(pathFcli) || 'unknown';
-    return {
-      fcliPath: pathFcli,
-      version,
-      source: 'path',
-      selfType: 'stable'
-    };
-  }
-  
-  // 4. Check CI/CD tool cache
-  const toolCacheFcli = await checkToolCache(options);
-  if (toolCacheFcli) {
-    const version = await getFcliVersion(toolCacheFcli) || 'unknown';
-    return {
-      fcliPath: toolCacheFcli,
-      version,
-      source: 'tool-cache',
-      selfType: 'stable'
-    };
-  }
-  
-  // 5. Download and cache (always latest v3.x)
-  const fcliPath = await downloadAndCacheFcli(config);
+  // 3. Download fcli (always re-downloads latest v3.x to ensure latest version is used)
+  const fcliPath = await downloadAndInstallFcli(config);
   const version = await getFcliVersion(fcliPath) || getFcliVersionConstant();
   
   return {
     fcliPath,
     version,
-    source: config.cacheEnabled ? 'cache' : 'download',
+    source: 'download',
     selfType: 'unstable'
   };
-}
-
-/**
- * Refresh cache - force re-download
- */
-export async function refreshCache(): Promise<void> {
-  const config = getEffectiveConfig();
-  
-  if (!config.cacheEnabled) {
-    console.log('Cache is disabled. Enable it with: configure --cache-enabled');
-    return;
-  }
-  
-  const cacheDir = getCacheDir(config);
-  const configHash = getConfigHash(config);
-  const versionCacheDir = path.join(cacheDir, configHash);
-  
-  // Remove cached version
-  if (fs.existsSync(versionCacheDir)) {
-    fs.rmSync(versionCacheDir, { recursive: true, force: true });
-    console.log(`✓ Cleared cache for fcli ${getFcliVersionConstant()}.x`);
-  }
-  
-  // Re-download
-  console.log('Re-downloading latest fcli v3.x...');
-  const fcliPath = await downloadAndCacheFcli(config);
-  const version = await getFcliVersion(fcliPath) || getFcliVersionConstant();
-  
-  console.log(`✓ Refreshed fcli cache: ${version} (${fcliPath})`);
 }

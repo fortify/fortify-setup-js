@@ -6,8 +6,8 @@
  */
 
 import { execSync } from 'child_process';
-import { bootstrapFcli, refreshCache } from './bootstrap.js';
-import { loadConfig, saveConfig, getDefaultConfig, clearCache } from './config.js';
+import { runFortifySetup, runFortifyEnv, getActionHelp, showFortifyEnvHelp } from './actions.js';
+import { loadConfig, saveConfig, getDefaultConfig } from './config.js';
 import type { BootstrapConfig } from './types.js';
 
 const args = process.argv.slice(2);
@@ -28,19 +28,22 @@ USAGE
   npx @fortify/setup <command> [options]
 
 COMMANDS
-  configure     Configure fcli bootstrap settings
-  clear-cache   Clear cached fcli binary
+  config        Configure fcli bootstrap settings
   run [options] Bootstrap fcli and run fortify-setup action (default)
   env [options] Generate environment variables for installed Fortify tools
 
 Run 'npx @fortify/setup <command> --help' for more information on a command.
+
+NOTE
+  The 'run' command always re-downloads to ensure latest fcli version is used.
+  The downloaded fcli is saved to an internal cache for use by the 'env' command.
 `);
 }
 
 /**
- * Show configure command help
+ * Show config command help
  */
-function showConfigureHelp(): void {
+function showConfigHelp(): void {
   console.log(`
 Configure fcli bootstrap settings
 
@@ -48,37 +51,43 @@ Bootstrapping downloads a predefined fcli version that's then used to run
 the fcli fortify-setup action. This command configures bootstrap behavior.
 
 USAGE
-  npx @fortify/setup configure [options]
+  npx @fortify/setup config [options]
 
 OPTIONS
-  --fcli-base-url=<url>      Custom fcli download URL
-                             Default: https://github.com/fortify/fcli/releases/download
+  --fcli-download-url=<url>  Full URL to fcli archive (platform-specific)
+                             Example: https://github.com/fortify/fcli/releases/download/v3/fcli-linux.tgz
+  --signature-url=<url>      Full URL to signature file
+                             Default: <fcli-download-url>.rsa_sha256
   --fcli-path=<path>         Use pre-installed fcli binary (skip download)
-  --cache-enabled            Enable fcli binary caching
-  --no-cache-enabled         Disable fcli binary caching
-  --cache-dir=<path>         Custom cache directory path
+                             Must be fcli 3.14.0+
   --verify-signature         Verify RSA signatures on downloads (default)
   --no-verify-signature      Skip signature verification (not recommended)
+  --reset                    Reset configuration to defaults
 
 ENVIRONMENT VARIABLES
-  FCLI_BASE_URL              Override download URL
-  FCLI_PATH                  Override fcli binary path
-  FCLI_CACHE_ENABLED         Enable/disable caching (true|false)
-  FCLI_CACHE_DIR             Override cache directory
+  FCLI_DOWNLOAD_URL          Override fcli archive download URL
+  FCLI_SIGNATURE_URL         Override signature file URL
+  FCLI_PATH                  Override fcli binary path (must be 3.14.0+)
   FCLI_VERIFY_SIGNATURE      Enable/disable signature verification (true|false)
 
 Environment variables override config file settings.
 
 EXAMPLES
-  # Enable caching for faster subsequent runs
-  npx @fortify/setup configure --cache-enabled
-  
   # Use pre-installed fcli (skip downloads)
-  npx @fortify/setup configure --fcli-path=/usr/local/bin/fcli
+  npx @fortify/setup config --fcli-path=/usr/local/bin/fcli
+  
+  # Use custom download URL
+  npx @fortify/setup config --fcli-download-url=https://my-mirror.com/fcli-linux.tgz
+  
+  # Disable signature verification (not recommended)
+  npx @fortify/setup config --no-verify-signature
+  
+  # Reset to defaults
+  npx @fortify/setup config --reset
   
   # Configure via environment variables
-  export FCLI_CACHE_ENABLED=true
-  npx @fortify/setup configure
+  export FCLI_PATH=/usr/local/bin/fcli
+  npx @fortify/setup config
 `);
 }
 
@@ -100,11 +109,12 @@ All options are passed through to the fortify-setup action.
 
 BOOTSTRAP BEHAVIOR
   Bootstrap searches for fcli in the following order:
-  1. Configured path (--fcli-path or FCLI_PATH)
-  2. Environment variables (FCLI, FCLI_CMD, FCLI_HOME)
-  3. PATH (existing fcli command)
-  4. CI/CD tool cache (GitHub Actions, Azure Pipelines, GitLab)
-  5. Download fixed fcli version (with caching)
+  1. Configured path (via config file or FCLI_PATH env var). Must be 3.14.0+
+  2. FCLI-specific environment variables (FCLI, FCLI_CMD, FCLI_HOME)
+  3. Download latest v3.x (always re-downloads to ensure latest version is used)
+  
+  NOTE: Step 3 always re-downloads to ensure latest fcli version is used. The
+  downloaded fcli is saved to an internal cache for use by the 'env' command.
 
 EXAMPLES
   # Install ScanCentral Client
@@ -140,13 +150,12 @@ USAGE
 
 All options are passed through to the fortify-env action.
 
-BOOTSTRAP BEHAVIOR
-  Bootstrap searches for fcli in the following order:
-  1. Configured path (--fcli-path or FCLI_PATH)
-  2. Environment variables (FCLI, FCLI_CMD, FCLI_HOME)
-  3. PATH (existing fcli command)
-  4. CI/CD tool cache (GitHub Actions, Azure Pipelines, GitLab)
-  5. Download fixed fcli version (with caching)
+PREREQUISITE
+  The 'env' command does NOT bootstrap or download fcli. It requires one of:
+  1. The 'run' command has been executed (uses cached fcli from last run)
+  2. Pre-installed fcli configured via 'config --fcli-path' or env vars
+
+  If neither is available, the command will fail with an error.
 
 EXAMPLES
   # Generate env for all installed tools (shell format)
@@ -167,32 +176,29 @@ EXAMPLES
 }
 
 /**
- * Parse configure options
+ * Parse config options
  */
-function parseConfigureOptions(args: string[]): Partial<BootstrapConfig> {
+function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>, reset: boolean } {
   const config: Partial<BootstrapConfig> = {};
+  let reset = false;
   
   for (const arg of args) {
-    if (arg.startsWith('--fcli-base-url=')) {
-      config.baseUrl = arg.split('=')[1];
+    if (arg.startsWith('--fcli-download-url=')) {
+      config.fcliDownloadUrl = arg.split('=')[1];
     } else if (arg.startsWith('--fcli-path=')) {
       config.fcliPath = arg.split('=')[1];
-    } else if (arg.startsWith('--cache-dir=')) {
-      config.cacheDir = arg.split('=')[1];
-    } else if (arg === '--cache-enabled') {
-      config.cacheEnabled = true;
-    } else if (arg === '--no-cache-enabled') {
-      config.cacheEnabled = false;
     } else if (arg === '--verify-signature') {
       config.verifySignature = true;
     } else if (arg === '--no-verify-signature') {
       config.verifySignature = false;
     } else if (arg.startsWith('--signature-url=')) {
       config.signatureUrl = arg.split('=')[1];
+    } else if (arg === '--reset') {
+      reset = true;
     }
   }
   
-  return config;
+  return { config, reset };
 }
 
 /**
@@ -207,39 +213,42 @@ async function main(): Promise<void> {
     }
     
     // Configure bootstrap
-    if (command === 'configure') {
+    if (command === 'config') {
       const configArgs = args.slice(1);
       
-      // Show configure help
+      // Show config help
       if (configArgs[0] === '--help' || configArgs[0] === '-h') {
-        showConfigureHelp();
+        showConfigHelp();
+        process.exit(0);
+      }
+      
+      const { config: updates, reset } = parseConfigOptions(configArgs);
+      
+      if (reset) {
+        const { resetConfig } = await import('./config.js');
+        resetConfig();
+        console.log('✓ Configuration reset to defaults');
         process.exit(0);
       }
       
       const currentConfig = loadConfig();
-      const updates = parseConfigureOptions(configArgs);
       const newConfig = { ...currentConfig, ...updates };
       
       saveConfig(newConfig);
       
       console.log('✓ Configuration saved\n');
       console.log('Current settings:');
-      console.log(`  base-url: ${newConfig.baseUrl}`);
-      console.log(`  cache-enabled: ${newConfig.cacheEnabled}`);
+      if (newConfig.fcliDownloadUrl) {
+        console.log(`  fcli-download-url: ${newConfig.fcliDownloadUrl}`);
+      }
+      if (newConfig.signatureUrl) {
+        console.log(`  signature-url: ${newConfig.signatureUrl}`);
+      }
       console.log(`  verify-signature: ${newConfig.verifySignature}`);
       if (newConfig.fcliPath) {
         console.log(`  fcli-path: ${newConfig.fcliPath}`);
       }
-      if (newConfig.cacheDir) {
-        console.log(`  cache-dir: ${newConfig.cacheDir}`);
-      }
       
-      process.exit(0);
-    }
-    
-    // Clear cache
-    if (command === 'clear-cache') {
-      clearCache();
       process.exit(0);
     }
     
@@ -256,22 +265,18 @@ async function main(): Promise<void> {
       // Show fcli action help (requires bootstrap)
       if (actionArgs[0] === '--fcli-help') {
         console.log('Bootstrapping fcli to show action help...\n');
-        const result = await bootstrapFcli();
-        console.log(`✓ Using fcli ${result.version} (source: ${result.source})\n`);
-        execSync(`"${result.fcliPath}" action help fortify-setup`, { stdio: 'inherit' });
+        const help = await getActionHelp('fortify-setup');
+        console.log(help);
         process.exit(0);
       }
       
       // Run action
-      console.log('Bootstrapping fcli...\n');
-      const result = await bootstrapFcli();
-      console.log(`✓ Using fcli ${result.version} (source: ${result.source})\n`);
-      console.log('Running fortify-setup action...\n');
+      const result = await runFortifySetup({
+        args: actionArgs,
+        verbose: true
+      });
       
-      const cmd = `"${result.fcliPath}" action run fortify-setup ${actionArgs.join(' ')}`;
-      execSync(cmd, { stdio: 'inherit' });
-      
-      process.exit(0);
+      process.exit(result.exitCode);
     }
     
     // Run fortify-env action
@@ -284,22 +289,27 @@ async function main(): Promise<void> {
         process.exit(0);
       }
       
-      // Show fcli action help (requires bootstrap)
+      // Show fcli action help (requires fcli access)
       if (actionArgs.length > 0 && actionArgs[0] === '--fcli-help') {
-        console.log('Bootstrapping fcli to show action help...\n');
-        const result = await bootstrapFcli();
-        console.log(`✓ Using fcli ${result.version} (source: ${result.source})\n`);
-        execSync(`"${result.fcliPath}" action help fortify-env`, { stdio: 'inherit' });
+        try {
+          showFortifyEnvHelp();
+        } catch (error: any) {
+          console.error(`\n❌ Error: ${error.message}\n`);
+          process.exit(1);
+        }
         process.exit(0);
       }
       
-      // Run action (no bootstrap messages for clean env output)
-      const result = await bootstrapFcli();
+      // Run action (no bootstrap, use cached or configured fcli)
+      const result = await runFortifyEnv({
+        args: actionArgs
+      });
       
-      const cmd = `"${result.fcliPath}" action run fortify-env ${actionArgs.join(' ')}`;
-      execSync(cmd, { stdio: 'inherit' });
+      if (result.exitCode !== 0) {
+        console.error(`\n❌ Error: fortify-env action failed with exit code ${result.exitCode}\n`);
+      }
       
-      process.exit(0);
+      process.exit(result.exitCode);
     }
     
     // Unknown command

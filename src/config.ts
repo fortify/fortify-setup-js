@@ -26,9 +26,20 @@ export function getFcliVersion(): string {
  * Get default bootstrap configuration
  */
 export function getDefaultConfig(): BootstrapConfig {
+  const fcliVersion = FCLI_VERSION;
+  const platform = os.platform();
+  let archiveName: string;
+  
+  if (platform === 'win32') {
+    archiveName = 'fcli-windows.zip';
+  } else if (platform === 'darwin') {
+    archiveName = 'fcli-mac.tgz';
+  } else {
+    archiveName = 'fcli-linux.tgz';
+  }
+  
   return {
-    baseUrl: 'https://github.com/fortify/fcli/releases/download',
-    cacheEnabled: true, // Always cache the fixed version
+    fcliDownloadUrl: `https://github.com/fortify/fcli/releases/download/${fcliVersion}/${archiveName}`,
     verifySignature: true
   };
 }
@@ -65,6 +76,15 @@ export function saveConfig(config: BootstrapConfig): void {
 }
 
 /**
+ * Reset configuration to defaults (delete config file)
+ */
+export function resetConfig(): void {
+  if (fs.existsSync(CONFIG_FILE)) {
+    fs.unlinkSync(CONFIG_FILE);
+  }
+}
+
+/**
  * Get effective configuration (config file + env overrides + runtime options)
  */
 export function getEffectiveConfig(options: BootstrapOptions = {}): BootstrapConfig {
@@ -73,24 +93,16 @@ export function getEffectiveConfig(options: BootstrapOptions = {}): BootstrapCon
   // Environment variable overrides
   const envOverrides: Partial<BootstrapConfig> = {};
   
-  if (process.env.FCLI_BASE_URL) {
-    envOverrides.baseUrl = process.env.FCLI_BASE_URL;
-  }
-  
-  if (process.env.FCLI_CACHE_ENABLED !== undefined) {
-    envOverrides.cacheEnabled = process.env.FCLI_CACHE_ENABLED === 'true';
-  }
-  
-  if (process.env.FCLI_CACHE_DIR) {
-    envOverrides.cacheDir = process.env.FCLI_CACHE_DIR;
-  }
-  
-  if (process.env.FCLI_VERIFY_SIGNATURE !== undefined) {
-    envOverrides.verifySignature = process.env.FCLI_VERIFY_SIGNATURE === 'true';
+  if (process.env.FCLI_DOWNLOAD_URL) {
+    envOverrides.fcliDownloadUrl = process.env.FCLI_DOWNLOAD_URL;
   }
   
   if (process.env.FCLI_SIGNATURE_URL) {
     envOverrides.signatureUrl = process.env.FCLI_SIGNATURE_URL;
+  }
+  
+  if (process.env.FCLI_VERIFY_SIGNATURE !== undefined) {
+    envOverrides.verifySignature = process.env.FCLI_VERIFY_SIGNATURE === 'true';
   }
   
   if (process.env.FCLI_PATH) {
@@ -101,9 +113,8 @@ export function getEffectiveConfig(options: BootstrapOptions = {}): BootstrapCon
   return {
     ...fileConfig,
     ...envOverrides,
-    ...(options.baseUrl && { baseUrl: options.baseUrl }),
-    ...(options.cacheEnabled !== undefined && { cacheEnabled: options.cacheEnabled }),
-    ...(options.cacheDir && { cacheDir: options.cacheDir }),
+    ...(options.fcliDownloadUrl && { fcliDownloadUrl: options.fcliDownloadUrl }),
+    ...(options.signatureUrl && { signatureUrl: options.signatureUrl }),
     ...(options.verifySignature !== undefined && { verifySignature: options.verifySignature }),
     ...(options.fcliPath && { fcliPath: options.fcliPath })
   };
@@ -115,39 +126,22 @@ export function getEffectiveConfig(options: BootstrapOptions = {}): BootstrapCon
 export function getConfigHash(config: BootstrapConfig): string {
   const relevant = {
     fcliVersion: FCLI_VERSION,
-    baseUrl: config.baseUrl,
+    fcliDownloadUrl: config.fcliDownloadUrl,
     verifySignature: config.verifySignature
   };
   return crypto.createHash('sha256').update(JSON.stringify(relevant)).digest('hex').slice(0, 16);
 }
 
 /**
- * Get cache directory
+ * Get temporary directory for downloaded fcli (used by env command)
  */
-export function getCacheDir(config: BootstrapConfig): string {
-  if (config.cacheDir) {
-    return config.cacheDir;
-  }
-  
+export function getTempDir(): string {
   const platform = os.platform();
   if (platform === 'win32') {
-    return path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'fortify', 'fcli-cache');
+    return path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'fortify', 'fcli-temp');
   } else {
-    return path.join(process.env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache'), 'fortify', 'fcli');
+    return path.join(os.tmpdir(), 'fortify', 'fcli');
   }
 }
 
-/**
- * Clear cache directory
- */
-export function clearCache(): void {
-  const config = loadConfig();
-  const cacheDir = getCacheDir(config);
-  
-  if (fs.existsSync(cacheDir)) {
-    fs.rmSync(cacheDir, { recursive: true, force: true });
-    console.log(`✓ Cleared cache: ${cacheDir}`);
-  } else {
-    console.log(`Cache directory does not exist: ${cacheDir}`);
-  }
-}
+

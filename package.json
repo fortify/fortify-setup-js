@@ -9,8 +9,8 @@
     "fortify-setup": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json && chmod +x dist/cli.js",
-    "clean": "rm -rf dist",
+    "build": "tsc --project tsconfig.json && node -e \"require('fs').chmodSync('dist/cli.js', '755')\"",
+    "clean": "node -e \"require('fs').rmSync('dist', {recursive: true, force: true})\"",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepublishOnly": "npm run clean && npm run build"
   },
@@ -42,8 +42,15 @@
     "README.md",
     "LICENSE"
   ],
+  "dependencies": {
+    "tar": "^7.0.0",
+    "undici": "^6.0.0",
+    "unzipper": "^0.12.0"
+  },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "@types/tar": "^6.1.0",
+    "@types/unzipper": "^0.10.11",
     "typescript": "^5.3.3"
   }
 }

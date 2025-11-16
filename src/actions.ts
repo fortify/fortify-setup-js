@@ -4,8 +4,12 @@
  */
 
 import { execSync } from 'child_process';
-import { bootstrapFcli, getCachedFcliPath } from './bootstrap.js';
+import { bootstrapFcli, getLastDownloadedFcliPath } from './bootstrap.js';
+import { getEffectiveConfig } from './config.js';
 import type { BootstrapOptions, BootstrapResult } from './types.js';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 
 // Helper to get fcli version (avoid circular import)
 async function getFcliVersion(fcliPath: string): Promise<string | null> {
@@ -49,6 +53,9 @@ export interface RunActionResult {
 /**
  * Run fortify-setup action programmatically
  * 
+ * This always re-downloads the latest fcli v3.x to ensure fresh binaries.
+ * The downloaded fcli is saved to a temporary directory for use by runFortifyEnv().
+ * 
  * @param options - Bootstrap and action options
  * @returns Promise with bootstrap and execution results
  * 
@@ -64,8 +71,7 @@ export interface RunActionResult {
  * 
  * // Install multiple tools
  * await runFortifySetup({
- *   args: ['--fcli-version=latest', '--sc-client-version=24.4.0'],
- *   cacheEnabled: true
+ *   args: ['--fcli-version=latest', '--sc-client-version=24.4.0']
  * });
  * ```
  */
@@ -105,14 +111,21 @@ export async function runFortifySetup(options: RunActionOptions = {}): Promise<R
 /**
  * Run fortify-env action programmatically
  * 
+ * This uses the fcli from the temporary directory that was downloaded during the
+ * last runFortifySetup() call. If no downloaded fcli is available, it falls back
+ * to bootstrap (e.g., if pre-installed fcli is available).
+ * 
  * @param options - Bootstrap and action options
  * @returns Promise with bootstrap results and environment output
  * 
  * @example
  * ```typescript
- * import { runFortifyEnv } from '@fortify/setup';
+ * import { runFortifySetup, runFortifyEnv } from '@fortify/setup';
  * 
- * // Get environment variables for all installed tools
+ * // First run setup to download fcli
+ * await runFortifySetup({ args: ['--sc-client-version=latest'] });
+ * 
+ * // Then get environment variables
  * const result = await runFortifyEnv();
  * console.log(result.output); // Environment variable definitions
  * 
@@ -123,28 +136,26 @@ export async function runFortifySetup(options: RunActionOptions = {}): Promise<R
  * ```
  */
 export async function runFortifyEnv(options: RunActionOptions = {}): Promise<RunActionResult> {
-  const { args = [], verbose = false, ...bootstrapOptions } = options;
+  const { args = [], verbose = false } = options;
   
-  // Try to use cached fcli first (from previous run command)
-  let bootstrap: BootstrapResult;
-  const cachedPath = getCachedFcliPath();
+  // Get fcli path without bootstrapping (uses cached or pre-installed)
+  const fcliPath = getFcliPathForEnv();
   
-  if (cachedPath) {
-    // Use cached fcli from previous run
-    const version = await getFcliVersion(cachedPath) || 'unknown';
-    bootstrap = {
-      fcliPath: cachedPath,
-      version,
-      source: 'cache',
-      selfType: 'unstable'
-    };
-  } else {
-    // Fallback to bootstrap (e.g., if pre-installed fcli available)
-    bootstrap = await bootstrapFcli(bootstrapOptions);
+  if (!fcliPath) {
+    throw new Error('No fcli available. Run the \'run\' command first or configure a pre-installed fcli path.');
   }
   
+  // Get version for bootstrap result
+  const version = await getFcliVersion(fcliPath) || 'unknown';
+  const bootstrap: BootstrapResult = {
+    fcliPath,
+    version,
+    source: getLastDownloadedFcliPath() ? 'download' : 'preinstalled',
+    selfType: getLastDownloadedFcliPath() ? 'unstable' : 'stable'
+  };
+  
   // Run fortify-env action
-  const cmd = `"${bootstrap.fcliPath}" action run fortify-env ${args.join(' ')}`;
+  const cmd = `"${fcliPath}" action run fortify-env ${args.join(' ')}`;
   
   try {
     const output = execSync(cmd, { encoding: 'utf-8' });
@@ -189,4 +200,56 @@ export async function getActionHelp(
   } catch (error: any) {
     throw new Error(`Failed to get help for action '${actionName}': ${error.message}`);
   }
+}
+
+/**
+ * Get fcli path without bootstrapping (for env command)
+ * Checks cached fcli, then configured/pre-installed fcli
+ * 
+ * @returns fcli path or null if not available
+ */
+export function getFcliPathForEnv(): string | null {
+  // Try cached fcli first
+  let fcliPath = getLastDownloadedFcliPath();
+  
+  if (!fcliPath) {
+    // Try configured path
+    const config = getEffectiveConfig();
+    if (config.fcliPath) {
+      fcliPath = config.fcliPath;
+    }
+  }
+  
+  if (!fcliPath) {
+    // Check FCLI-specific environment variables
+    const fcliEnv = process.env.FCLI || process.env.FCLI_CMD || process.env.FCLI_HOME;
+    if (fcliEnv) {
+      const binaryName = os.platform() === 'win32' ? 'fcli.exe' : 'fcli';
+      const potentialPath = fs.existsSync(fcliEnv) && fs.statSync(fcliEnv).isDirectory()
+        ? path.join(fcliEnv, 'bin', binaryName)
+        : fcliEnv;
+        
+      if (fs.existsSync(potentialPath)) {
+        fcliPath = potentialPath;
+      }
+    }
+  }
+  
+  return fcliPath;
+}
+
+/**
+ * Show help for fortify-env action (without bootstrapping)
+ * Uses cached or pre-installed fcli
+ * 
+ * @throws Error if no fcli is available
+ */
+export function showFortifyEnvHelp(): void {
+  const fcliPath = getFcliPathForEnv();
+  
+  if (!fcliPath) {
+    throw new Error('No fcli available. Run the \'run\' command first or configure a pre-installed fcli path.');
+  }
+  
+  execSync(`"${fcliPath}" action help fortify-env`, { stdio: 'inherit' });
 }

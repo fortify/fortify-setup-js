@@ -23,22 +23,16 @@
  * Bootstrap configuration options
  */
 export interface BootstrapConfig {
-  /** Base URL for downloading fcli (default: GitHub releases) */
-  baseUrl: string;
+  /** Full download URL for fcli archive (default: derived from GitHub releases) */
+  fcliDownloadUrl?: string;
   
-  /** Enable caching (default: true for interactive, false in CI) */
-  cacheEnabled: boolean;
-  
-  /** Custom cache directory (default: ~/.cache/fortify/fcli) */
-  cacheDir?: string;
+  /** Full URL for fcli signature file (default: ${fcliDownloadUrl}.rsa_sha256) */
+  signatureUrl?: string;
   
   /** Verify signature (default: true) */
   verifySignature: boolean;
   
-  /** Custom signature URL pattern (default: ${baseUrl}/${version}/${archive}.rsa_sha256) */
-  signatureUrl?: string;
-  
-  /** Path to pre-installed fcli (skips download) */
+  /** Path to pre-installed fcli (skips download). Must be fcli 3.14.0+ */
   fcliPath?: string;
 }
 
@@ -46,23 +40,17 @@ export interface BootstrapConfig {
  * Bootstrap options for runtime (merges config + env + CLI args)
  */
 export interface BootstrapOptions {
-  /** Override base URL */
-  baseUrl?: string;
+  /** Override fcli download URL */
+  fcliDownloadUrl?: string;
   
-  /** Override cache enabled */
-  cacheEnabled?: boolean;
-  
-  /** Override cache directory */
-  cacheDir?: string;
+  /** Override signature URL */
+  signatureUrl?: string;
   
   /** Override signature verification */
   verifySignature?: boolean;
   
   /** Override fcli path */
   fcliPath?: string;
-  
-  /** Tool cache directory (CI/CD runners) */
-  toolCacheDir?: string;
 }
 
 /**
@@ -75,7 +63,7 @@ export interface BootstrapResult {
   /** Fcli version */
   version: string;
   
-  /** Source: path|preinstalled|tool-cache|cache|download */
+  /** Source: configured|preinstalled|download */
   source: string;
   
   /** Self type for fcli action: stable (pre-installed) or unstable (downloaded) */
@@ -83,9 +71,9 @@ export interface BootstrapResult {
 }
 
 /**
- * Cache metadata
+ * Download metadata (stored temporarily for env command access)
  */
-export interface CacheMetadata {
+export interface DownloadMetadata {
   /** Download URL used */
   url: string;
   
