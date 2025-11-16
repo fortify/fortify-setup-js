@@ -181,30 +181,15 @@ async function downloadAndCacheFcli(config: BootstrapConfig): Promise<string> {
   const fcliPath = path.join(extractDir, getFcliBinaryName());
   const metadataPath = path.join(versionCacheDir, 'metadata.json');
   
-  // Check if already cached and valid
-  if (config.cacheEnabled && fs.existsSync(fcliPath) && fs.existsSync(metadataPath)) {
-    try {
-      const metadata: CacheMetadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
-      
-      // Validate cache is for same config
-      if (metadata.configHash === configHash) {
-        // Verify binary works
-        const version = await getFcliVersion(fcliPath);
-        if (version) {
-          return fcliPath;
-        }
-      }
-    } catch {
-      // Cache corrupted, re-download
-    }
+  // Always download fresh copy to ensure latest version within v3.x
+  // Remove any existing cached copy
+  if (fs.existsSync(versionCacheDir)) {
+    fs.rmSync(versionCacheDir, { recursive: true, force: true });
   }
+  fs.mkdirSync(versionCacheDir, { recursive: true });
   
   // Download
   console.log(`Downloading latest fcli ${fcliVersion}.x from ${downloadUrl}...`);
-  
-  if (!fs.existsSync(versionCacheDir)) {
-    fs.mkdirSync(versionCacheDir, { recursive: true });
-  }
   
   try {
     await downloadFile(downloadUrl, archivePath);
@@ -260,6 +245,20 @@ async function downloadAndCacheFcli(config: BootstrapConfig): Promise<string> {
 }
 
 /**
+ * Get cached fcli path (for env command after run has been executed)
+ */
+export function getCachedFcliPath(config?: BootstrapConfig): string | null {
+  const effectiveConfig = config || getEffectiveConfig();
+  const cacheDir = getCacheDir(effectiveConfig);
+  const configHash = getConfigHash(effectiveConfig);
+  const versionCacheDir = path.join(cacheDir, configHash);
+  const extractDir = path.join(versionCacheDir, 'bin');
+  const fcliPath = path.join(extractDir, getFcliBinaryName());
+  
+  return fs.existsSync(fcliPath) ? fcliPath : null;
+}
+
+/**
  * Bootstrap fcli - main entry point
  */
 export async function bootstrapFcli(options: BootstrapOptions = {}): Promise<BootstrapResult> {
@@ -274,7 +273,8 @@ export async function bootstrapFcli(options: BootstrapOptions = {}): Promise<Boo
     return {
       fcliPath: config.fcliPath,
       version,
-      source: 'configured'
+      source: 'configured',
+      selfType: 'stable'
     };
   }
   
@@ -291,7 +291,8 @@ export async function bootstrapFcli(options: BootstrapOptions = {}): Promise<Boo
       return {
         fcliPath,
         version,
-        source: 'preinstalled'
+        source: 'preinstalled',
+        selfType: 'stable'
       };
     }
   }
@@ -303,7 +304,8 @@ export async function bootstrapFcli(options: BootstrapOptions = {}): Promise<Boo
     return {
       fcliPath: pathFcli,
       version,
-      source: 'path'
+      source: 'path',
+      selfType: 'stable'
     };
   }
   
@@ -314,7 +316,8 @@ export async function bootstrapFcli(options: BootstrapOptions = {}): Promise<Boo
     return {
       fcliPath: toolCacheFcli,
       version,
-      source: 'tool-cache'
+      source: 'tool-cache',
+      selfType: 'stable'
     };
   }
   
@@ -325,7 +328,8 @@ export async function bootstrapFcli(options: BootstrapOptions = {}): Promise<Boo
   return {
     fcliPath,
     version,
-    source: config.cacheEnabled ? 'cache' : 'download'
+    source: config.cacheEnabled ? 'cache' : 'download',
+    selfType: 'unstable'
   };
 }
 

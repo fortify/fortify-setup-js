@@ -13,7 +13,7 @@ const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 // Fixed fcli version that contains the fortify-setup action
 // Only needs to be updated when fcli fortify-setup action is enhanced
-const FCLI_VERSION = 'v3.14.0';
+const FCLI_VERSION = 'v3';
 
 /**
  * Get fixed fcli version

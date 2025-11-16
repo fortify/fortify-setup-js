@@ -4,8 +4,22 @@
  */
 
 import { execSync } from 'child_process';
-import { bootstrapFcli } from './bootstrap.js';
+import { bootstrapFcli, getCachedFcliPath } from './bootstrap.js';
 import type { BootstrapOptions, BootstrapResult } from './types.js';
+
+// Helper to get fcli version (avoid circular import)
+async function getFcliVersion(fcliPath: string): Promise<string | null> {
+  try {
+    const { stdout } = require('child_process').execSync(`"${fcliPath}" --version`, { 
+      encoding: 'utf-8',
+      timeout: 5000 
+    });
+    const match = stdout.match(/(\d+\.\d+\.\d+)/);
+    return match ? `v${match[1]}` : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Options for running actions
@@ -70,8 +84,9 @@ export async function runFortifySetup(options: RunActionOptions = {}): Promise<R
     console.log('Running fortify-setup action...\n');
   }
   
-  // Run fortify-setup action
-  const cmd = `"${bootstrap.fcliPath}" action run fortify-setup ${args.join(' ')}`;
+  // Run fortify-setup action with --self and --self-type
+  const selfArgs = `--self "${bootstrap.fcliPath}" --self-type ${bootstrap.selfType}`;
+  const cmd = `"${bootstrap.fcliPath}" action run fortify-setup ${selfArgs} ${args.join(' ')}`;
   
   try {
     execSync(cmd, { stdio: verbose ? 'inherit' : 'pipe' });
@@ -110,8 +125,23 @@ export async function runFortifySetup(options: RunActionOptions = {}): Promise<R
 export async function runFortifyEnv(options: RunActionOptions = {}): Promise<RunActionResult> {
   const { args = [], verbose = false, ...bootstrapOptions } = options;
   
-  // Bootstrap fcli (no messages for clean env output)
-  const bootstrap = await bootstrapFcli(bootstrapOptions);
+  // Try to use cached fcli first (from previous run command)
+  let bootstrap: BootstrapResult;
+  const cachedPath = getCachedFcliPath();
+  
+  if (cachedPath) {
+    // Use cached fcli from previous run
+    const version = await getFcliVersion(cachedPath) || 'unknown';
+    bootstrap = {
+      fcliPath: cachedPath,
+      version,
+      source: 'cache',
+      selfType: 'unstable'
+    };
+  } else {
+    // Fallback to bootstrap (e.g., if pre-installed fcli available)
+    bootstrap = await bootstrapFcli(bootstrapOptions);
+  }
   
   // Run fortify-env action
   const cmd = `"${bootstrap.fcliPath}" action run fortify-env ${args.join(' ')}`;

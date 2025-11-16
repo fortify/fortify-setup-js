@@ -60,6 +60,9 @@ export interface BootstrapResult {
   
   /** Source: path|preinstalled|tool-cache|cache|download */
   source: string;
+  
+  /** Self type for fcli action: stable (pre-installed) or unstable (downloaded) */
+  selfType: 'stable' | 'unstable';
 }
 
 /**
