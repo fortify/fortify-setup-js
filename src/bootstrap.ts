@@ -166,6 +166,10 @@ async function extractArchive(archivePath: string, destDir: string): Promise<voi
 
 /**
  * Download and cache fcli (always latest v3.x)
+ * 
+ * Note: Fcli GitHub releases include semantic version tags (v3, v3.6, v3.6.1).
+ * Release v3.6.1 has tags v3.6.1, v3.6, and v3 all pointing to same assets.
+ * This allows downloading from /v3/ or /v3.6/ URLs for semantic version patterns.
  */
 async function downloadAndCacheFcli(config: BootstrapConfig): Promise<string> {
   const fcliVersion = getFcliVersionConstant();
