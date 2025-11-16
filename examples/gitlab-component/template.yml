@@ -1,0 +1,76 @@
+spec:
+  inputs:
+    sc-client-version:
+      default: ''
+      description: 'ScanCentral Client version to install (e.g., latest, 24.4.0, auto, skip)'
+    fcli-version:
+      default: 'latest'
+      description: 'fcli version to install (e.g., latest, auto, skip)'
+    fod-uploader-version:
+      default: ''
+      description: 'FoD Uploader version to install'
+    debricked-cli-version:
+      default: ''
+      description: 'Debricked CLI version to install'
+    export-path:
+      default: 'true'
+      description: 'Add installed tools to PATH'
+    use-tool-cache:
+      default: 'false'
+      description: 'Use GitLab tool cache for installed tools'
+---
+
+# Fortify Setup Component
+# Install Fortify tools in GitLab CI pipelines
+
+fortify-setup:
+  image: node:20-alpine
+  script:
+    - |
+      echo "Installing @fortify/setup..."
+      npm install -g @fortify/setup
+      
+      echo "Setting up Fortify tools..."
+      
+      # Build arguments array
+      ARGS=""
+      
+      if [ -n "$[[ inputs.sc-client-version ]]" ]; then
+        ARGS="$ARGS --sc-client-version=$[[ inputs.sc-client-version ]]"
+      fi
+      
+      if [ -n "$[[ inputs.fcli-version ]]" ]; then
+        ARGS="$ARGS --fcli-version=$[[ inputs.fcli-version ]]"
+      fi
+      
+      if [ -n "$[[ inputs.fod-uploader-version ]]" ]; then
+        ARGS="$ARGS --fod-uploader-version=$[[ inputs.fod-uploader-version ]]"
+      fi
+      
+      if [ -n "$[[ inputs.debricked-cli-version ]]" ]; then
+        ARGS="$ARGS --debricked-cli-version=$[[ inputs.debricked-cli-version ]]"
+      fi
+      
+      if [ "$[[ inputs.export-path ]]" = "true" ]; then
+        ARGS="$ARGS --export-path"
+      fi
+      
+      if [ "$[[ inputs.use-tool-cache ]]" = "true" ]; then
+        ARGS="$ARGS --use-tool-cache"
+      fi
+      
+      # Disable fcli caching in CI
+      export FCLI_CACHE_ENABLED=false
+      
+      # Run fortify-setup
+      fortify-setup run $ARGS
+      
+      # Generate environment variables for downstream jobs
+      echo "Generating environment variables..."
+      fortify-setup env > fortify-tools.env
+      
+      echo "✓ Fortify tools setup complete"
+  
+  artifacts:
+    reports:
+      dotenv: fortify-tools.env

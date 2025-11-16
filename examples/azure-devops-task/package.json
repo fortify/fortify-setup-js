@@ -1,0 +1,26 @@
+{
+  "name": "fortify-setup-ado-task",
+  "version": "1.0.0",
+  "description": "Azure DevOps task for setting up Fortify tools",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"No tests specified\""
+  },
+  "keywords": [
+    "fortify",
+    "azure-devops",
+    "security",
+    "sast"
+  ],
+  "author": "Fortify",
+  "license": "MIT",
+  "dependencies": {
+    "@fortify/setup": "^0.0.0",
+    "azure-pipelines-task-lib": "^4.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  }
+}

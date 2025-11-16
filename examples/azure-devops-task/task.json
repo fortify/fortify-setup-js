@@ -1,0 +1,71 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Microsoft/azure-pipelines-task-lib/master/tasks.schema.json",
+  "id": "00000000-0000-0000-0000-000000000000",
+  "name": "FortifySetup",
+  "friendlyName": "Fortify Setup",
+  "description": "Install Fortify tools using @fortify/setup",
+  "helpMarkDown": "Install Fortify tools for security scanning. [More Information](https://github.com/fortify/fortify-setup-js)",
+  "category": "Utility",
+  "author": "Fortify",
+  "version": {
+    "Major": 1,
+    "Minor": 0,
+    "Patch": 0
+  },
+  "instanceNameFormat": "Setup Fortify Tools",
+  "inputs": [
+    {
+      "name": "scClientVersion",
+      "type": "string",
+      "label": "ScanCentral Client Version",
+      "defaultValue": "",
+      "required": false,
+      "helpMarkDown": "Version of ScanCentral Client to install (e.g., latest, 24.4.0, auto, skip)"
+    },
+    {
+      "name": "fcliVersion",
+      "type": "string",
+      "label": "fcli Version",
+      "defaultValue": "latest",
+      "required": false,
+      "helpMarkDown": "Version of fcli to install (e.g., latest, auto, skip)"
+    },
+    {
+      "name": "fodUploaderVersion",
+      "type": "string",
+      "label": "FoD Uploader Version",
+      "defaultValue": "",
+      "required": false,
+      "helpMarkDown": "Version of Fortify on Demand Uploader to install"
+    },
+    {
+      "name": "debrickedCliVersion",
+      "type": "string",
+      "label": "Debricked CLI Version",
+      "defaultValue": "",
+      "required": false,
+      "helpMarkDown": "Version of Debricked CLI to install"
+    },
+    {
+      "name": "exportPath",
+      "type": "boolean",
+      "label": "Export to PATH",
+      "defaultValue": "true",
+      "required": false,
+      "helpMarkDown": "Add installed tools to PATH for use in subsequent tasks"
+    },
+    {
+      "name": "useToolCache",
+      "type": "boolean",
+      "label": "Use Tool Cache",
+      "defaultValue": "false",
+      "required": false,
+      "helpMarkDown": "Use Azure Pipelines tool cache for installed tools"
+    }
+  ],
+  "execution": {
+    "Node20": {
+      "target": "dist/index.js"
+    }
+  }
+}
