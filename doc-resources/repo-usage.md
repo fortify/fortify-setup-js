@@ -34,12 +34,22 @@ npx @fortify/setup run --fcli-version=latest
 npm install --save-dev @fortify/setup
 ```
 
+**For CLI usage:**
 ```json
 {
   "scripts": {
     "fortify-setup": "fortify-setup run --fcli-version=latest"
   }
 }
+```
+
+**For programmatic/library usage:**
+```typescript
+import { runFortifySetup, runFortifyEnv } from '@fortify/setup';
+
+await runFortifySetup({
+  args: ['--sc-client-version=latest']
+});
 ```
 
 ## Commands
@@ -271,6 +281,10 @@ npx @fortify/setup run --fcli-version=latest
 
 ## Programmatic API
 
+The `@fortify/setup` package exports a TypeScript API for building custom integrations.
+
+### Basic API Usage
+
 ```typescript
 import { bootstrapFcli, getEffectiveConfig } from '@fortify/setup';
 
@@ -287,6 +301,36 @@ console.log(`Source: ${result.source}`); // path|preinstalled|tool-cache|cache|d
 const config = getEffectiveConfig();
 console.log(`Cache enabled: ${config.cacheEnabled}`);
 ```
+
+### Running Actions Programmatically
+
+```typescript
+import { runFortifySetup, runFortifyEnv } from '@fortify/setup';
+
+// Run fortify-setup action
+await runFortifySetup({
+  args: ['--sc-client-version=latest', '--fcli-version=latest'],
+  cacheEnabled: false,
+  verbose: true
+});
+
+// Get environment variables
+const envResult = await runFortifyEnv({
+  args: ['--format=github']
+});
+console.log(envResult.output);
+```
+
+### Building Platform Integrations
+
+See the [examples directory](./examples/) for complete integration examples:
+
+- **[GitHub Action](./examples/github-action/)** - TypeScript-based GitHub Action
+- **[Azure DevOps Task](./examples/azure-devops-task/)** - TypeScript-based Azure Pipeline task
+- **[GitLab Component](./examples/gitlab-component/)** - Shell-based GitLab CI component
+
+Each example demonstrates best practices for using `@fortify/setup` in different CI/CD platforms.
+
 
 ## Security
 

@@ -9,10 +9,13 @@ The `@fortify/setup` npm package provides a lightweight, zero-dependency utility
 * Three-tier configuration (file, environment variables, CLI arguments)
 * CI/CD tool cache integration (GitHub Actions, Azure DevOps, GitLab)
 * Simple command structure: `configure`, `refresh-cache`, `clear-cache`, `run`
+* **TypeScript library API** for building custom integrations
+* **Complete examples** for GitHub Actions, Azure DevOps, and GitLab CI
 
 **Use Cases:**
 
 * **CI/CD Pipelines**: Automatically set up Fortify tools in GitHub Actions, Azure DevOps, GitLab CI
+* **Custom Integrations**: Build platform-specific wrappers using the TypeScript API
 * **Local Development**: Configure once, use cached fcli for fast repeated runs
 * **Docker**: Bootstrap fcli in containerized environments
 * **Air-gapped Environments**: Use pre-installed fcli or custom download locations
