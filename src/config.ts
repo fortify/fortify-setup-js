@@ -39,7 +39,7 @@ export function getDefaultConfig(): BootstrapConfig {
   }
   
   return {
-    fcliDownloadUrl: `https://github.com/fortify/fcli/releases/download/${fcliVersion}/${archiveName}`,
+    fcliUrl: `https://github.com/fortify/fcli/releases/download/${fcliVersion}/${archiveName}`,
     verifySignature: true
   };
 }
@@ -93,8 +93,8 @@ export function getEffectiveConfig(options: BootstrapOptions = {}): BootstrapCon
   // Environment variable overrides
   const envOverrides: Partial<BootstrapConfig> = {};
   
-  if (process.env.FCLI_DOWNLOAD_URL) {
-    envOverrides.fcliDownloadUrl = process.env.FCLI_DOWNLOAD_URL;
+  if (process.env.FCLI_URL) {
+    envOverrides.fcliUrl = process.env.FCLI_URL;
   }
   
   if (process.env.FCLI_SIGNATURE_URL) {
@@ -113,7 +113,7 @@ export function getEffectiveConfig(options: BootstrapOptions = {}): BootstrapCon
   return {
     ...fileConfig,
     ...envOverrides,
-    ...(options.fcliDownloadUrl && { fcliDownloadUrl: options.fcliDownloadUrl }),
+    ...(options.fcliUrl && { fcliUrl: options.fcliUrl }),
     ...(options.signatureUrl && { signatureUrl: options.signatureUrl }),
     ...(options.verifySignature !== undefined && { verifySignature: options.verifySignature }),
     ...(options.fcliPath && { fcliPath: options.fcliPath })
@@ -126,7 +126,7 @@ export function getEffectiveConfig(options: BootstrapOptions = {}): BootstrapCon
 export function getConfigHash(config: BootstrapConfig): string {
   const relevant = {
     fcliVersion: FCLI_VERSION,
-    fcliDownloadUrl: config.fcliDownloadUrl,
+    fcliUrl: config.fcliUrl,
     verifySignature: config.verifySignature
   };
   return crypto.createHash('sha256').update(JSON.stringify(relevant)).digest('hex').slice(0, 16);

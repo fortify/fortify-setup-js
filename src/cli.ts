@@ -54,18 +54,25 @@ USAGE
   npx @fortify/setup config [options]
 
 OPTIONS
-  --fcli-download-url=<url>  Full URL to fcli archive (platform-specific)
+  --fcli-url=<url>           Full URL to fcli archive (platform-specific)
                              Example: https://github.com/fortify/fcli/releases/download/v3/fcli-linux.tgz
   --signature-url=<url>      Full URL to signature file
-                             Default: <fcli-download-url>.rsa_sha256
+                             Default: <fcli-url>.rsa_sha256
   --fcli-path=<path>         Use pre-installed fcli binary (skip download)
                              Must be fcli 3.14.0+
   --verify-signature         Verify RSA signatures on downloads (default)
   --no-verify-signature      Skip signature verification (not recommended)
   --reset                    Reset configuration to defaults
+  --show                     Display current configuration and exit
+
+OPTION RESET BEHAVIOR
+  Specifying any option on the config command resets all other mutually-exclusive
+  options. For example, configuring --fcli-url clears any previously configured
+  --fcli-path setting, and vice versa. This ensures only one download/path method
+  is active at a time.
 
 ENVIRONMENT VARIABLES
-  FCLI_DOWNLOAD_URL          Override fcli archive download URL
+  FCLI_URL                   Override fcli archive download URL
   FCLI_SIGNATURE_URL         Override signature file URL
   FCLI_PATH                  Override fcli binary path (must be 3.14.0+)
   FCLI_VERIFY_SIGNATURE      Enable/disable signature verification (true|false)
@@ -77,7 +84,7 @@ EXAMPLES
   npx @fortify/setup config --fcli-path=/usr/local/bin/fcli
   
   # Use custom download URL
-  npx @fortify/setup config --fcli-download-url=https://my-mirror.com/fcli-linux.tgz
+  npx @fortify/setup config --fcli-url=https://my-mirror.com/fcli-linux.tgz
   
   # Disable signature verification (not recommended)
   npx @fortify/setup config --no-verify-signature
@@ -178,13 +185,32 @@ EXAMPLES
 /**
  * Parse config options
  */
-function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>, reset: boolean } {
+function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>, reset: boolean, show: boolean } {
   const config: Partial<BootstrapConfig> = {};
   let reset = false;
+  let show = false;
+  const validOptions = [
+    '--fcli-url=',
+    '--fcli-path=',
+    '--verify-signature',
+    '--no-verify-signature',
+    '--signature-url=',
+    '--reset',
+    '--show'
+  ];
   
   for (const arg of args) {
-    if (arg.startsWith('--fcli-download-url=')) {
-      config.fcliDownloadUrl = arg.split('=')[1];
+    // Validate option is recognized
+    const isValid = validOptions.some(opt => 
+      opt.endsWith('=') ? arg.startsWith(opt) : arg === opt
+    );
+    
+    if (!isValid) {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+    
+    if (arg.startsWith('--fcli-url=')) {
+      config.fcliUrl = arg.split('=')[1];
     } else if (arg.startsWith('--fcli-path=')) {
       config.fcliPath = arg.split('=')[1];
     } else if (arg === '--verify-signature') {
@@ -195,10 +221,12 @@ function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>,
       config.signatureUrl = arg.split('=')[1];
     } else if (arg === '--reset') {
       reset = true;
+    } else if (arg === '--show') {
+      show = true;
     }
   }
   
-  return { config, reset };
+  return { config, reset, show };
 }
 
 /**
@@ -222,7 +250,24 @@ async function main(): Promise<void> {
         process.exit(0);
       }
       
-      const { config: updates, reset } = parseConfigOptions(configArgs);
+      const { config: updates, reset, show } = parseConfigOptions(configArgs);
+      
+      if (show) {
+        const currentConfig = loadConfig();
+        console.log('Current configuration:\n');
+        if (currentConfig.fcliUrl) {
+          console.log(`  fcli-url: ${currentConfig.fcliUrl}`);
+        }
+        if (currentConfig.signatureUrl) {
+          console.log(`  signature-url: ${currentConfig.signatureUrl}`);
+        }
+        console.log(`  verify-signature: ${currentConfig.verifySignature}`);
+        if (currentConfig.fcliPath) {
+          console.log(`  fcli-path: ${currentConfig.fcliPath}`);
+        }
+        console.log('\nNote: Environment variables (FCLI_URL, FCLI_PATH, etc.) override these settings.');
+        process.exit(0);
+      }
       
       if (reset) {
         const { resetConfig } = await import('./config.js');
@@ -232,14 +277,25 @@ async function main(): Promise<void> {
       }
       
       const currentConfig = loadConfig();
-      const newConfig = { ...currentConfig, ...updates };
+      let newConfig = { ...currentConfig, ...updates };
+      
+      // Reset mutually-exclusive options when one is specified
+      if (updates.fcliUrl !== undefined) {
+        // When setting fcli-url, clear fcli-path
+        delete newConfig.fcliPath;
+      }
+      if (updates.fcliPath !== undefined) {
+        // When setting fcli-path, clear fcli-url and signature-url
+        delete newConfig.fcliUrl;
+        delete newConfig.signatureUrl;
+      }
       
       saveConfig(newConfig);
       
       console.log('✓ Configuration saved\n');
       console.log('Current settings:');
-      if (newConfig.fcliDownloadUrl) {
-        console.log(`  fcli-download-url: ${newConfig.fcliDownloadUrl}`);
+      if (newConfig.fcliUrl) {
+        console.log(`  fcli-url: ${newConfig.fcliUrl}`);
       }
       if (newConfig.signatureUrl) {
         console.log(`  signature-url: ${newConfig.signatureUrl}`);
@@ -307,6 +363,13 @@ async function main(): Promise<void> {
       
       if (result.exitCode !== 0) {
         console.error(`\n❌ Error: fortify-env action failed with exit code ${result.exitCode}\n`);
+        console.error('Troubleshooting suggestions:');
+        console.error('  • Verify action options are correct (run with --fcli-help to see available options)');
+        if (result.bootstrap.source === 'configured' || result.bootstrap.source === 'preinstalled') {
+          console.error('  • Custom fcli may be incompatible (requires fcli 3.14.0+, same major version)');
+          console.error('  • Try using default download instead: fortify-setup config --reset');
+        }
+        console.error('');
       }
       
       process.exit(result.exitCode);

@@ -24,9 +24,9 @@
  */
 export interface BootstrapConfig {
   /** Full download URL for fcli archive (default: derived from GitHub releases) */
-  fcliDownloadUrl?: string;
+  fcliUrl?: string;
   
-  /** Full URL for fcli signature file (default: ${fcliDownloadUrl}.rsa_sha256) */
+  /** Full URL for fcli signature file (default: ${fcliUrl}.rsa_sha256) */
   signatureUrl?: string;
   
   /** Verify signature (default: true) */
@@ -41,7 +41,7 @@ export interface BootstrapConfig {
  */
 export interface BootstrapOptions {
   /** Override fcli download URL */
-  fcliDownloadUrl?: string;
+  fcliUrl?: string;
   
   /** Override signature URL */
   signatureUrl?: string;

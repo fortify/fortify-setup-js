@@ -21,13 +21,13 @@ const execAsync = promisify(exec);
 
 // Fortify public key for signature verification
 const FORTIFY_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArij9U9yJVNc+wxn5LoH+
-xQ+LYsN6v3SZJGFGkHoYIzqX8KgKr8XLhwvYmA0I2Cj6MjQWgFLGPDjVGeLfHDfq
-eCEPP75Y1m0+fgb0dH3y7rFj3BbOdRJTjNGBBF9rN8rBBG38V/+bF8YYpAzCfH+q
-iXzMY+j8HG/nKwH2F9RPLGMKhbIHNm4bvLH/cQDPgXPxVOKMu8f1hJAqZSZNIGvl
-sLKB8wB5T5iNVRWIp2wQZXqnPBJh0hRZ2oy7ktDKuTcF+XLVQ9uEm2rnuYfFhfxh
-4PL9kFOBBEqQKZ0j1tIvB7c6qV2jPSXpRYDcW9bF7WqSjfZ3CknZJPCxLfDxvGHH
-OwIDAQAB
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArij9U9yJVNc53oEMFWYp
+NrXUG1UoRZseDh/p34q1uywD70RGKKWZvXIcUAZZwbZtCu4i0UzsrKRJeUwqanbc
+woJvYanp6lc3DccXUN1w1Y0WOHOaBxiiK3B1TtEIH1cK/X+ZzazPG5nX7TSGh8Tp
+/uxQzUFli2mDVLqaP62/fB9uJ2joX9Gtw8sZfuPGNMRoc8IdhjagbFkhFT7WCZnk
+FH/4Co007lmXLAe12lQQqR/pOTeHJv1sfda1xaHtj4/Tcrq04Kx0ZmGAd5D9lA92
+8pdBbzoe/mI5/Sk+nIY3AHkLXB9YAaKJf//Wb1yiP1/hchtVkfXyIaGM+cVyn7AN
+VQIDAQAB
 -----END PUBLIC KEY-----`;
 
 /**
@@ -170,7 +170,7 @@ async function extractArchive(archivePath: string, destDir: string): Promise<voi
 async function downloadAndInstallFcli(config: BootstrapConfig): Promise<string> {
   const fcliVersion = getFcliVersionConstant();
   const defaultConfig = getDefaultConfig();
-  const downloadUrl = config.fcliDownloadUrl || defaultConfig.fcliDownloadUrl!;
+  const downloadUrl = config.fcliUrl || defaultConfig.fcliUrl!;
   const archiveName = getFcliArchiveName();
   const tempDir = getTempDir();
   const configHash = getConfigHash(config);
@@ -190,7 +190,7 @@ async function downloadAndInstallFcli(config: BootstrapConfig): Promise<string> 
   fs.mkdirSync(versionTempDir, { recursive: true });
   
   // Download
-  console.log(`Downloading latest fcli ${fcliVersion}.x from ${downloadUrl}...`);
+  console.log(`Downloading fcli from ${downloadUrl}...`);
   
   try {
     await downloadFile(downloadUrl, archivePath);

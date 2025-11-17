@@ -101,6 +101,16 @@ export async function runFortifySetup(options: RunActionOptions = {}): Promise<R
       exitCode: 0
     };
   } catch (error: any) {
+    if (verbose) {
+      console.error('\n❌ fortify-setup action failed\n');
+      console.error('Troubleshooting suggestions:');
+      console.error('  • Verify action options are correct (run with --fcli-help to see available options)');
+      if (bootstrap.source === 'configured' || bootstrap.source === 'preinstalled') {
+        console.error('  • Custom fcli may be incompatible (requires fcli 3.14.0+, same major version)');
+        console.error('  • Try using default download instead: fortify-setup config --reset');
+      }
+      console.error('');
+    }
     return {
       bootstrap,
       exitCode: error.status || 1
