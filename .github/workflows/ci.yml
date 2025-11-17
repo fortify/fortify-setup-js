@@ -37,9 +37,9 @@ jobs:
             exit 1
           fi
       
-      - name: Test bootstrap (configure)
+      - name: Test bootstrap (config)
         run: |
-          node dist/cli.js configure --fcli-version=v3 --cache-enabled
+          node dist/cli.js config --fcli-version=v3 --cache-enabled
           echo "Configuration test passed"
       
       - name: Upload dist artifacts
