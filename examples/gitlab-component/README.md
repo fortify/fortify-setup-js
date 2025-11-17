@@ -27,16 +27,16 @@ GitLab components use a `template.yml` file to define the component:
 ```yaml
 spec:
   inputs:
-    sc-client-version:
+    sc-client:
       default: ''
       description: 'ScanCentral Client version to install'
-    fcli-version:
+    fcli:
       default: 'latest'
       description: 'fcli version to install'
-    fod-uploader-version:
+    fod-uploader:
       default: ''
       description: 'FoD Uploader version to install'
-    debricked-cli-version:
+    debricked-cli:
       default: ''
       description: 'Debricked CLI version to install'
     export-path:
@@ -54,20 +54,20 @@ fortify-setup:
       # Build arguments
       ARGS=""
       
-      if [ -n "$[[ inputs.sc-client-version ]]" ]; then
-        ARGS="$ARGS --sc-client-version=$[[ inputs.sc-client-version ]]"
+      if [ -n "$[[ inputs.sc-client ]]" ]; then
+        ARGS="$ARGS --sc-client=$[[ inputs.sc-client ]]"
       fi
       
-      if [ -n "$[[ inputs.fcli-version ]]" ]; then
-        ARGS="$ARGS --fcli-version=$[[ inputs.fcli-version ]]"
+      if [ -n "$[[ inputs.fcli ]]" ]; then
+        ARGS="$ARGS --fcli=$[[ inputs.fcli ]]"
       fi
       
-      if [ -n "$[[ inputs.fod-uploader-version ]]" ]; then
-        ARGS="$ARGS --fod-uploader-version=$[[ inputs.fod-uploader-version ]]"
+      if [ -n "$[[ inputs.fod-uploader ]]" ]; then
+        ARGS="$ARGS --fod-uploader=$[[ inputs.fod-uploader ]]"
       fi
       
-      if [ -n "$[[ inputs.debricked-cli-version ]]" ]; then
-        ARGS="$ARGS --debricked-cli-version=$[[ inputs.debricked-cli-version ]]"
+      if [ -n "$[[ inputs.debricked-cli ]]" ]; then
+        ARGS="$ARGS --debricked-cli=$[[ inputs.debricked-cli ]]"
       fi
       
       if [ "$[[ inputs.export-path ]]" = "true" ]; then
@@ -99,8 +99,8 @@ export FCLI_CACHE_ENABLED=false  # Disable caching in CI
 
 # Run fortify-setup with arguments
 fortify-setup run \
-  --sc-client-version="${SC_CLIENT_VERSION:-latest}" \
-  --fcli-version="${FCLI_VERSION:-latest}" \
+  --sc-client="${SC_CLIENT_VERSION:-latest}" \
+  --fcli="${FCLI_VERSION:-latest}" \
   --export-path
 
 # Generate and source environment variables
@@ -127,8 +127,8 @@ setup-fortify:
   stage: setup
   extends: fortify-setup
   inputs:
-    sc-client-version: 'latest'
-    fcli-version: 'latest'
+    sc-client: 'latest'
+    fcli: 'latest'
 
 fortify-scan:
   stage: scan
@@ -147,7 +147,7 @@ fortify-setup:
   stage: setup
   script:
     - npm install -g @fortify/setup
-    - fortify-setup run --sc-client-version=latest --fcli-version=latest
+    - fortify-setup run --sc-client=latest --fcli=latest
     - fortify-setup env >> fortify.env
   artifacts:
     reports:
@@ -210,7 +210,7 @@ variables:
   image: node:20-alpine
   before_script:
     - npm install -g @fortify/setup
-    - fortify-setup run --sc-client-version=latest
+    - fortify-setup run --sc-client=latest
     - eval "$(fortify-setup env)"
 
 sast-scan:
@@ -243,7 +243,7 @@ fortify-setup:
     
     # Install tools from internal mirror
     - fortify-setup run \
-        --sc-client-version=latest \
+        --sc-client=latest \
         --air-gapped
 ```
 
@@ -254,7 +254,7 @@ fortify-setup:
   image: node:20-alpine
   script:
     - npm install -g @fortify/setup
-    - fortify-setup run --sc-client-version=latest
+    - fortify-setup run --sc-client=latest
   cache:
     key: fortify-tools
     paths:
@@ -300,7 +300,7 @@ fortify-setup env >> fortify.env
 npm install -g @fortify/setup
 
 # Or use npx (no install required)
-npx @fortify/setup run --sc-client-version=latest
+npx @fortify/setup run --sc-client=latest
 ```
 
 ## Next Steps

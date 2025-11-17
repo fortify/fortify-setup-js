@@ -25,22 +25,22 @@ async function run(): Promise<void> {
     const args: string[] = [];
     
     if (scClientVersion) {
-      args.push(`--sc-client-version=${scClientVersion}`);
+      args.push(`--sc-client=${scClientVersion}`);
       tl.debug(`Adding ScanCentral Client version: ${scClientVersion}`);
     }
     
     if (fcliVersion) {
-      args.push(`--fcli-version=${fcliVersion}`);
+      args.push(`--fcli=${fcliVersion}`);
       tl.debug(`Adding fcli version: ${fcliVersion}`);
     }
     
     if (fodUploaderVersion) {
-      args.push(`--fod-uploader-version=${fodUploaderVersion}`);
+      args.push(`--fod-uploader=${fodUploaderVersion}`);
       tl.debug(`Adding FoD Uploader version: ${fodUploaderVersion}`);
     }
     
     if (debrickedCliVersion) {
-      args.push(`--debricked-cli-version=${debrickedCliVersion}`);
+      args.push(`--debricked-cli=${debrickedCliVersion}`);
       tl.debug(`Adding Debricked CLI version: ${debrickedCliVersion}`);
     }
     

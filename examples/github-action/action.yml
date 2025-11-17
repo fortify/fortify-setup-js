@@ -6,17 +6,17 @@ branding:
   color: 'blue'
 
 inputs:
-  sc-client-version:
+  sc-client:
     description: 'ScanCentral Client version to install (e.g., latest, 24.4.0, auto, skip)'
     required: false
-  fcli-version:
+  fcli:
     description: 'fcli version to install (e.g., latest, auto, skip)'
     required: false
     default: 'latest'
-  fod-uploader-version:
+  fod-uploader:
     description: 'Fortify on Demand Uploader version to install'
     required: false
-  debricked-cli-version:
+  debricked-cli:
     description: 'Debricked CLI version to install'
     required: false
   export-path:

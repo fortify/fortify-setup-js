@@ -118,16 +118,16 @@ BOOTSTRAP BEHAVIOR
 
 EXAMPLES
   # Install ScanCentral Client
-  npx @fortify/setup run --sc-client-version=latest
+  npx @fortify/setup run --sc-client=latest
   
   # Install multiple tools
-  npx @fortify/setup run --fcli-version=latest --sc-client-version=24.4.0
+  npx @fortify/setup run --fcli=latest --sc-client=24.4.0
   
   # Use CI/CD tool cache
-  npx @fortify/setup run --use-tool-cache --sc-client-version=latest
+  npx @fortify/setup run --use-tool-cache --sc-client=latest
   
   # Air-gapped mode (pre-installed tools only)
-  npx @fortify/setup run --air-gapped --sc-client-version=auto
+  npx @fortify/setup run --air-gapped --sc-client=auto
   
   # Show complete fcli action help
   npx @fortify/setup run --fcli-help
@@ -162,7 +162,7 @@ EXAMPLES
   npx @fortify/setup env
   
   # Generate env for specific tools with versions
-  npx @fortify/setup env --sc-client-version 24.4.0 --fcli-version latest
+  npx @fortify/setup env --sc-client 24.4.0 --fcli latest
   
   # Generate env for GitHub Actions
   npx @fortify/setup env --format github

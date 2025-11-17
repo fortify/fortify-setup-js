@@ -69,7 +69,7 @@ import { runFortifySetup, runFortifyEnv } from '@fortify/setup';
 
 // Install tools
 await runFortifySetup({
-  args: ['--sc-client-version=latest'],
+  args: ['--sc-client=latest'],
   cacheEnabled: false,
   verbose: true
 });
@@ -84,7 +84,7 @@ console.log(result.output);
 #!/bin/bash
 
 # Install tools
-npx @fortify/setup run --sc-client-version=latest
+npx @fortify/setup run --sc-client=latest
 
 # Get environment variables
 eval $(npx @fortify/setup env)

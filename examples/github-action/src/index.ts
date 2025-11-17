@@ -14,10 +14,10 @@ import * as core from '@actions/core';
 async function run(): Promise<void> {
   try {
     // Get action inputs
-    const scClientVersion = core.getInput('sc-client-version');
-    const fcliVersion = core.getInput('fcli-version');
-    const fodUploaderVersion = core.getInput('fod-uploader-version');
-    const debrickedCliVersion = core.getInput('debricked-cli-version');
+    const scClientVersion = core.getInput('sc-client');
+    const fcliVersion = core.getInput('fcli');
+    const fodUploaderVersion = core.getInput('fod-uploader');
+    const debrickedCliVersion = core.getInput('debricked-cli');
     const exportPath = core.getBooleanInput('export-path');
     const useToolCache = core.getBooleanInput('use-tool-cache');
 
@@ -25,19 +25,19 @@ async function run(): Promise<void> {
     const args: string[] = [];
     
     if (scClientVersion) {
-      args.push(`--sc-client-version=${scClientVersion}`);
+      args.push(`--sc-client=${scClientVersion}`);
     }
     
     if (fcliVersion) {
-      args.push(`--fcli-version=${fcliVersion}`);
+      args.push(`--fcli=${fcliVersion}`);
     }
     
     if (fodUploaderVersion) {
-      args.push(`--fod-uploader-version=${fodUploaderVersion}`);
+      args.push(`--fod-uploader=${fodUploaderVersion}`);
     }
     
     if (debrickedCliVersion) {
-      args.push(`--debricked-cli-version=${debrickedCliVersion}`);
+      args.push(`--debricked-cli=${debrickedCliVersion}`);
     }
     
     if (exportPath) {

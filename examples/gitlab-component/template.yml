@@ -1,15 +1,15 @@
 spec:
   inputs:
-    sc-client-version:
+    sc-client:
       default: ''
       description: 'ScanCentral Client version to install (e.g., latest, 24.4.0, auto, skip)'
-    fcli-version:
+    fcli:
       default: 'latest'
       description: 'fcli version to install (e.g., latest, auto, skip)'
-    fod-uploader-version:
+    fod-uploader:
       default: ''
       description: 'FoD Uploader version to install'
-    debricked-cli-version:
+    debricked-cli:
       default: ''
       description: 'Debricked CLI version to install'
     export-path:
@@ -35,20 +35,20 @@ fortify-setup:
       # Build arguments array
       ARGS=""
       
-      if [ -n "$[[ inputs.sc-client-version ]]" ]; then
-        ARGS="$ARGS --sc-client-version=$[[ inputs.sc-client-version ]]"
+      if [ -n "$[[ inputs.sc-client ]]" ]; then
+        ARGS="$ARGS --sc-client=$[[ inputs.sc-client ]]"
       fi
       
-      if [ -n "$[[ inputs.fcli-version ]]" ]; then
-        ARGS="$ARGS --fcli-version=$[[ inputs.fcli-version ]]"
+      if [ -n "$[[ inputs.fcli ]]" ]; then
+        ARGS="$ARGS --fcli=$[[ inputs.fcli ]]"
       fi
       
-      if [ -n "$[[ inputs.fod-uploader-version ]]" ]; then
-        ARGS="$ARGS --fod-uploader-version=$[[ inputs.fod-uploader-version ]]"
+      if [ -n "$[[ inputs.fod-uploader ]]" ]; then
+        ARGS="$ARGS --fod-uploader=$[[ inputs.fod-uploader ]]"
       fi
       
-      if [ -n "$[[ inputs.debricked-cli-version ]]" ]; then
-        ARGS="$ARGS --debricked-cli-version=$[[ inputs.debricked-cli-version ]]"
+      if [ -n "$[[ inputs.debricked-cli ]]" ]; then
+        ARGS="$ARGS --debricked-cli=$[[ inputs.debricked-cli ]]"
       fi
       
       if [ "$[[ inputs.export-path ]]" = "true" ]; then

@@ -41,8 +41,8 @@ import * as core from '@actions/core';
 
 ### 2. Get Action Inputs
 ```typescript
-const scClientVersion = core.getInput('sc-client-version');
-const fcliVersion = core.getInput('fcli-version');
+const scClientVersion = core.getInput('sc-client');
+const fcliVersion = core.getInput('fcli');
 const exportPath = core.getBooleanInput('export-path');
 ```
 
@@ -50,8 +50,8 @@ const exportPath = core.getBooleanInput('export-path');
 ```typescript
 await runFortifySetup({
   args: [
-    scClientVersion && `--sc-client-version=${scClientVersion}`,
-    fcliVersion && `--fcli-version=${fcliVersion}`,
+    scClientVersion && `--sc-client=${scClientVersion}`,
+    fcliVersion && `--fcli=${fcliVersion}`,
     exportPath && '--export-path'
   ].filter(Boolean),
   verbose: true
@@ -75,10 +75,10 @@ The `action.yml` file defines the action metadata:
 name: 'Fortify Setup'
 description: 'Install Fortify tools using @fortify/setup'
 inputs:
-  sc-client-version:
+  sc-client:
     description: 'ScanCentral Client version'
     required: false
-  fcli-version:
+  fcli:
     description: 'fcli version'
     required: false
     default: 'latest'
@@ -118,8 +118,8 @@ jobs:
       - name: Setup Fortify
         uses: your-org/fortify-setup-action@v1
         with:
-          sc-client-version: 'latest'
-          fcli-version: 'latest'
+          sc-client: 'latest'
+          fcli: 'latest'
           export-path: true
       
       - name: Run scan
@@ -147,7 +147,7 @@ See the official Fortify GitHub Action for a production-ready implementation:
 ### Custom Bootstrap Options
 ```typescript
 await runFortifySetup({
-  args: ['--sc-client-version=latest'],
+  args: ['--sc-client=latest'],
   cacheEnabled: false,  // Disable caching in CI
   baseUrl: 'https://custom-mirror.example.com/fcli/releases',
   verifySignature: true
@@ -158,7 +158,7 @@ await runFortifySetup({
 ```typescript
 try {
   const result = await runFortifySetup({
-    args: ['--sc-client-version=latest']
+    args: ['--sc-client=latest']
   });
   
   if (result.exitCode !== 0) {
@@ -173,7 +173,7 @@ try {
 ```typescript
 // Install tools
 await runFortifySetup({
-  args: ['--sc-client-version=latest']
+  args: ['--sc-client=latest']
 });
 
 // Get environment variables

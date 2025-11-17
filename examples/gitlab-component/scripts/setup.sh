@@ -30,22 +30,22 @@ USE_TOOL_CACHE=${USE_TOOL_CACHE:-false}
 ARGS=""
 
 if [ -n "$SC_CLIENT_VERSION" ]; then
-  ARGS="$ARGS --sc-client-version=$SC_CLIENT_VERSION"
+  ARGS="$ARGS --sc-client=$SC_CLIENT_VERSION"
   echo "  • ScanCentral Client: $SC_CLIENT_VERSION"
 fi
 
 if [ -n "$FCLI_VERSION" ]; then
-  ARGS="$ARGS --fcli-version=$FCLI_VERSION"
+  ARGS="$ARGS --fcli=$FCLI_VERSION"
   echo "  • fcli: $FCLI_VERSION"
 fi
 
 if [ -n "$FOD_UPLOADER_VERSION" ]; then
-  ARGS="$ARGS --fod-uploader-version=$FOD_UPLOADER_VERSION"
+  ARGS="$ARGS --fod-uploader=$FOD_UPLOADER_VERSION"
   echo "  • FoD Uploader: $FOD_UPLOADER_VERSION"
 fi
 
 if [ -n "$DEBRICKED_CLI_VERSION" ]; then
-  ARGS="$ARGS --debricked-cli-version=$DEBRICKED_CLI_VERSION"
+  ARGS="$ARGS --debricked-cli=$DEBRICKED_CLI_VERSION"
   echo "  • Debricked CLI: $DEBRICKED_CLI_VERSION"
 fi
 
@@ -89,19 +89,19 @@ fi
 if command -v scancentral &> /dev/null; then
   echo "  ✓ scancentral: $(scancentral --version 2>&1 | head -n1)"
 else
-  echo "  ℹ scancentral: not installed (use --sc-client-version to install)"
+  echo "  ℹ scancentral: not installed (use --sc-client to install)"
 fi
 
 if command -v FoDUploader &> /dev/null; then
   echo "  ✓ FoDUploader: installed"
 else
-  echo "  ℹ FoDUploader: not installed (use --fod-uploader-version to install)"
+  echo "  ℹ FoDUploader: not installed (use --fod-uploader to install)"
 fi
 
 if command -v debricked &> /dev/null; then
   echo "  ✓ debricked: installed"
 else
-  echo "  ℹ debricked: not installed (use --debricked-cli-version to install)"
+  echo "  ℹ debricked: not installed (use --debricked-cli to install)"
 fi
 
 echo ""

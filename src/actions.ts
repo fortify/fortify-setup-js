@@ -65,13 +65,13 @@ export interface RunActionResult {
  * 
  * // Install ScanCentral Client
  * await runFortifySetup({
- *   args: ['--sc-client-version=latest'],
+ *   args: ['--sc-client=latest'],
  *   verbose: true
  * });
  * 
  * // Install multiple tools
  * await runFortifySetup({
- *   args: ['--fcli-version=latest', '--sc-client-version=24.4.0']
+ *   args: ['--fcli=latest', '--sc-client=24.4.0']
  * });
  * ```
  */
@@ -123,7 +123,7 @@ export async function runFortifySetup(options: RunActionOptions = {}): Promise<R
  * import { runFortifySetup, runFortifyEnv } from '@fortify/setup';
  * 
  * // First run setup to download fcli
- * await runFortifySetup({ args: ['--sc-client-version=latest'] });
+ * await runFortifySetup({ args: ['--sc-client=latest'] });
  * 
  * // Then get environment variables
  * const result = await runFortifyEnv();
@@ -131,7 +131,7 @@ export async function runFortifySetup(options: RunActionOptions = {}): Promise<R
  * 
  * // Get env for specific tools with versions
  * await runFortifyEnv({
- *   args: ['--sc-client-version', '24.4.0', '--format', 'github']
+ *   args: ['--sc-client', '24.4.0', '--format', 'github']
  * });
  * ```
  */

@@ -50,8 +50,8 @@ const exportPath = tl.getBoolInput('exportPath', false);
 ```typescript
 await runFortifySetup({
   args: [
-    scClientVersion && `--sc-client-version=${scClientVersion}`,
-    fcliVersion && `--fcli-version=${fcliVersion}`,
+    scClientVersion && `--sc-client=${scClientVersion}`,
+    fcliVersion && `--fcli=${fcliVersion}`,
     exportPath && '--export-path'
   ].filter(Boolean),
   verbose: true
@@ -200,7 +200,7 @@ Create a `vss-extension.json` for publishing to the marketplace:
 ### Custom Bootstrap Options
 ```typescript
 await runFortifySetup({
-  args: ['--sc-client-version=latest'],
+  args: ['--sc-client=latest'],
   cacheEnabled: false,  // Disable caching in CI
   baseUrl: 'https://custom-mirror.example.com/fcli/releases'
 });
@@ -210,7 +210,7 @@ await runFortifySetup({
 ```typescript
 try {
   const result = await runFortifySetup({
-    args: ['--sc-client-version=latest']
+    args: ['--sc-client=latest']
   });
   
   if (result.exitCode !== 0) {
