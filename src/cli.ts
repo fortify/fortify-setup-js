@@ -54,11 +54,11 @@ USAGE
   npx @fortify/setup config [options]
 
 OPTIONS
-  --fcli-url=<url>           Full URL to fcli archive (platform-specific)
-                             Example: https://github.com/fortify/fcli/releases/download/v3/fcli-linux.tgz
-  --signature-url=<url>      Full URL to signature file
-                             Default: <fcli-url>.rsa_sha256
-  --fcli-path=<path>         Use pre-installed fcli binary (skip download)
+  --fcli-url=<url>              Full URL to fcli archive (platform-specific)
+                                Example: https://github.com/fortify/fcli/releases/download/v3/fcli-linux.tgz
+  --fcli-rsa-sha256-url=<url>   Full URL to RSA SHA256 signature file
+                                Default: <fcli-url>.rsa_sha256
+  --fcli-path=<path>            Use pre-installed fcli binary (skip download)
                              Must be fcli 3.14.0+
   --verify-signature         Verify RSA signatures on downloads (default)
   --no-verify-signature      Skip signature verification (not recommended)
@@ -73,7 +73,7 @@ OPTION RESET BEHAVIOR
 
 ENVIRONMENT VARIABLES
   FCLI_URL                   Override fcli archive download URL
-  FCLI_SIGNATURE_URL         Override signature file URL
+  FCLI_RSA_SHA256_URL        Override RSA SHA256 signature file URL
   FCLI_PATH                  Override fcli binary path (must be 3.14.0+)
   FCLI_VERIFY_SIGNATURE      Enable/disable signature verification (true|false)
 
@@ -194,7 +194,7 @@ function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>,
     '--fcli-path',
     '--verify-signature',
     '--no-verify-signature',
-    '--signature-url',
+    '--fcli-rsa-sha256-url',
     '--reset',
     '--show'
   ];
@@ -227,11 +227,11 @@ function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>,
       config.verifySignature = true;
     } else if (arg === '--no-verify-signature') {
       config.verifySignature = false;
-    } else if (arg.startsWith('--signature-url')) {
+    } else if (arg.startsWith('--fcli-rsa-sha256-url')) {
       if (arg.includes('=')) {
-        config.signatureUrl = arg.split('=')[1];
+        config.fcliRsaSha256Url = arg.split('=')[1];
       } else {
-        config.signatureUrl = args[++i];
+        config.fcliRsaSha256Url = args[++i];
       }
     } else if (arg === '--reset') {
       reset = true;
@@ -281,8 +281,8 @@ async function main(): Promise<void> {
         if (currentConfig.fcliUrl) {
           console.log(`  fcli-url: ${currentConfig.fcliUrl}`);
         }
-        if (currentConfig.signatureUrl) {
-          console.log(`  signature-url: ${currentConfig.signatureUrl}`);
+        if (currentConfig.fcliRsaSha256Url) {
+          console.log(`  fcli-rsa-sha256-url: ${currentConfig.fcliRsaSha256Url}`);
         }
         console.log(`  verify-signature: ${currentConfig.verifySignature}`);
         if (currentConfig.fcliPath) {
@@ -312,8 +312,8 @@ async function main(): Promise<void> {
       if (newConfig.fcliUrl) {
         console.log(`  fcli-url: ${newConfig.fcliUrl}`);
       }
-      if (newConfig.signatureUrl) {
-        console.log(`  signature-url: ${newConfig.signatureUrl}`);
+      if (newConfig.fcliRsaSha256Url) {
+        console.log(`  fcli-rsa-sha256-url: ${newConfig.fcliRsaSha256Url}`);
       }
       console.log(`  verify-signature: ${newConfig.verifySignature}`);
       if (newConfig.fcliPath) {

@@ -204,16 +204,16 @@ async function downloadAndInstallFcli(config: BootstrapConfig): Promise<string> 
   
   // Verify signature if enabled
   if (config.verifySignature) {
-    const signatureUrl = config.signatureUrl || `${downloadUrl}.rsa_sha256`;
+    const fcliRsaSha256Url = config.fcliRsaSha256Url || `${downloadUrl}.rsa_sha256`;
     const signaturePath = `${archivePath}.rsa_sha256`;
     
-    console.log(`Verifying signature from ${signatureUrl}...`);
+    console.log(`Verifying signature from ${fcliRsaSha256Url}...`);
     
     try {
-      await downloadFile(signatureUrl, signaturePath);
+      await downloadFile(fcliRsaSha256Url, signaturePath);
     } catch (error: any) {
       fs.unlinkSync(archivePath);
-      throw new Error(`Failed to download signature from ${signatureUrl}: ${error.message}\nIf you trust the source, you can disable verification with: config --no-verify-signature`);
+      throw new Error(`Failed to download signature from ${fcliRsaSha256Url}: ${error.message}\nIf you trust the source, you can disable verification with: config --no-verify-signature`);
     }
     
     try {

@@ -147,10 +147,10 @@ npx @fortify/setup config [options]
 Configures how fcli is bootstrapped. Settings are saved to `~/.config/fortify/setup/config.json`.
 
 **Options:**
-- `--fcli-download-url=<url>` - Full URL to fcli archive (platform-specific)
+- `--fcli-url=<url>` - Full URL to fcli archive (platform-specific)
   - Example: `https://github.com/fortify/fcli/releases/download/v3/fcli-linux.tgz`
-- `--signature-url=<url>` - Full URL to RSA signature file
-  - Default: `<fcli-download-url>.rsa_sha256`
+- `--fcli-rsa-sha256-url=<url>` - Full URL to RSA SHA256 signature file
+  - Default: `<fcli-url>.rsa_sha256`
 - `--fcli-path=<path>` - Use pre-installed fcli binary (skip download)
   - **Must be fcli 3.14.0 or later**
 - `--verify-signature` - Verify RSA signatures on downloads (default: enabled)
@@ -158,8 +158,8 @@ Configures how fcli is bootstrapped. Settings are saved to `~/.config/fortify/se
 - `--reset` - Reset configuration to defaults
 
 **Environment variables** (override config file):
-- `FCLI_DOWNLOAD_URL` - Override fcli archive download URL
-- `FCLI_SIGNATURE_URL` - Override signature file URL
+- `FCLI_URL` - Override fcli archive download URL
+- `FCLI_RSA_SHA256_URL` - Override RSA SHA256 signature file URL
 - `FCLI_PATH` - Override fcli binary path (must be 3.14.0+)
 - `FCLI_VERIFY_SIGNATURE` - Enable/disable signature verification (true|false)
 
@@ -174,7 +174,7 @@ Configures how fcli is bootstrapped. Settings are saved to `~/.config/fortify/se
 npx @fortify/setup config --fcli-path=/usr/local/bin/fcli
 
 # Use custom download URL (internal mirror)
-npx @fortify/setup config --fcli-download-url=https://my-mirror.com/fcli-linux.tgz
+npx @fortify/setup config --fcli-url=https://my-mirror.com/fcli-linux.tgz
 
 # Disable signature verification (not recommended)
 npx @fortify/setup config --no-verify-signature
@@ -210,8 +210,8 @@ Configuration is saved to `~/.config/fortify/setup/config.json`:
 
 ```json
 {
-  "fcliDownloadUrl": "https://github.com/fortify/fcli/releases/download/v3/fcli-linux.tgz",
-  "signatureUrl": "https://github.com/fortify/fcli/releases/download/v3/fcli-linux.tgz.rsa_sha256",
+  "fcliUrl": "https://github.com/fortify/fcli/releases/download/v3/fcli-linux.tgz",
+  "fcliRsaSha256Url": "https://github.com/fortify/fcli/releases/download/v3/fcli-linux.tgz.rsa_sha256",
   "verifySignature": true
 }
 ```
@@ -343,12 +343,12 @@ npx @fortify/setup run --fcli=latest --sc-client=latest
 ```bash
 # Configure custom internal mirror
 npx @fortify/setup config \
-  --fcli-download-url=https://internal-mirror.company.com/fortify/fcli-linux.tgz \
-  --signature-url=https://internal-mirror.company.com/fortify/fcli-linux.tgz.rsa_sha256
+  --fcli-url=https://internal-mirror.company.com/fortify/fcli-linux.tgz \
+  --fcli-rsa-sha256-url=https://internal-mirror.company.com/fortify/fcli-linux.tgz.rsa_sha256
 
 # Or disable signature verification (not recommended)
 npx @fortify/setup config \
-  --fcli-download-url=https://internal-mirror.company.com/fortify/fcli-linux.tgz \
+  --fcli-url=https://internal-mirror.company.com/fortify/fcli-linux.tgz \
   --no-verify-signature
 
 # Run
@@ -453,8 +453,8 @@ npx @fortify/setup config --no-verify-signature
 
 # Or specify custom signature URL
 npx @fortify/setup config \
-  --fcli-download-url=https://custom-url/fcli-linux.tgz \
-  --signature-url=https://custom-url/fcli-linux.tgz.rsa_sha256
+  --fcli-url=https://custom-url/fcli-linux.tgz \
+  --fcli-rsa-sha256-url=https://custom-url/fcli-linux.tgz.rsa_sha256
 ```
 
 ### Using pre-installed fcli

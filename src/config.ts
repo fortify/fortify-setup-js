@@ -97,8 +97,8 @@ export function getEffectiveConfig(options: BootstrapOptions = {}): BootstrapCon
     envOverrides.fcliUrl = process.env.FCLI_URL;
   }
   
-  if (process.env.FCLI_SIGNATURE_URL) {
-    envOverrides.signatureUrl = process.env.FCLI_SIGNATURE_URL;
+  if (process.env.FCLI_RSA_SHA256_URL) {
+    envOverrides.fcliRsaSha256Url = process.env.FCLI_RSA_SHA256_URL;
   }
   
   if (process.env.FCLI_VERIFY_SIGNATURE !== undefined) {
@@ -114,7 +114,7 @@ export function getEffectiveConfig(options: BootstrapOptions = {}): BootstrapCon
     ...fileConfig,
     ...envOverrides,
     ...(options.fcliUrl && { fcliUrl: options.fcliUrl }),
-    ...(options.signatureUrl && { signatureUrl: options.signatureUrl }),
+    ...(options.fcliRsaSha256Url && { fcliRsaSha256Url: options.fcliRsaSha256Url }),
     ...(options.verifySignature !== undefined && { verifySignature: options.verifySignature }),
     ...(options.fcliPath && { fcliPath: options.fcliPath })
   };
