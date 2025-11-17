@@ -104,10 +104,10 @@ export async function runFortifySetup(options: RunActionOptions = {}): Promise<R
     if (verbose) {
       console.error('\n❌ fortify-setup action failed\n');
       console.error('Troubleshooting suggestions:');
-      console.error('  • Verify action options are correct (run with --fcli-help to see available options)');
+      console.error('  • Verify your action options are correct (run with --fcli-help to see available options)');
       if (bootstrap.source === 'configured' || bootstrap.source === 'preinstalled') {
-        console.error('  • Custom fcli may be incompatible (requires fcli 3.14.0+, same major version)');
-        console.error('  • Try using default download instead: fortify-setup config --reset');
+        console.error('  • Your custom fcli may be too old or incompatible (requires fcli 3.14.0 or later)');
+        console.error('  • Try using the default version: fortify-setup config --reset');
       }
       console.error('');
     }
@@ -208,7 +208,12 @@ export async function getActionHelp(
   try {
     return execSync(cmd, { encoding: 'utf-8' });
   } catch (error: any) {
-    throw new Error(`Failed to get help for action '${actionName}': ${error.message}`);
+    // Enrich error with context about source
+    let errorMsg = `Failed to get help for action '${actionName}': ${error.message}`;
+    if (bootstrap.source === 'configured' || bootstrap.source === 'preinstalled') {
+      errorMsg += ` (using ${bootstrap.source} fcli at ${bootstrap.fcliPath})`;
+    }
+    throw new Error(errorMsg);
   }
 }
 

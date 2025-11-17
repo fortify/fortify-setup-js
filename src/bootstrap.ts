@@ -211,11 +211,21 @@ async function downloadAndInstallFcli(config: BootstrapConfig): Promise<string> 
     
     try {
       await downloadFile(signatureUrl, signaturePath);
+    } catch (error: any) {
+      fs.unlinkSync(archivePath);
+      throw new Error(`Failed to download signature from ${signatureUrl}: ${error.message}\nIf you trust the source, you can disable verification with: config --no-verify-signature`);
+    }
+    
+    try {
       await verifySignature(archivePath, signaturePath);
       console.log('✓ Signature verification successful');
     } catch (error: any) {
       fs.unlinkSync(archivePath);
-      throw new Error(`Signature verification failed: ${error.message}\nIf you trust the source, you can disable verification with: config --no-verify-signature`);
+      // Avoid redundant "Signature verification failed: Signature verification failed"
+      const errorMsg = error.message.toLowerCase().includes('signature verification failed') 
+        ? error.message 
+        : `Signature verification failed: ${error.message}`;
+      throw new Error(`${errorMsg}\nIf you trust the source, you can disable verification with: config --no-verify-signature`);
     }
   }
   

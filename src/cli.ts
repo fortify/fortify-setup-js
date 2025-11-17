@@ -190,35 +190,49 @@ function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>,
   let reset = false;
   let show = false;
   const validOptions = [
-    '--fcli-url=',
-    '--fcli-path=',
+    '--fcli-url',
+    '--fcli-path',
     '--verify-signature',
     '--no-verify-signature',
-    '--signature-url=',
+    '--signature-url',
     '--reset',
     '--show'
   ];
   
-  for (const arg of args) {
-    // Validate option is recognized
-    const isValid = validOptions.some(opt => 
-      opt.endsWith('=') ? arg.startsWith(opt) : arg === opt
-    );
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    
+    // Validate option is recognized (check both --option and --option=value formats)
+    const optionName = arg.split('=')[0];
+    const isValid = validOptions.includes(optionName);
     
     if (!isValid) {
       throw new Error(`Unknown option: ${arg}`);
     }
     
-    if (arg.startsWith('--fcli-url=')) {
-      config.fcliUrl = arg.split('=')[1];
-    } else if (arg.startsWith('--fcli-path=')) {
-      config.fcliPath = arg.split('=')[1];
+    // Parse --fcli-url or --fcli-url=<value>
+    if (arg.startsWith('--fcli-url')) {
+      if (arg.includes('=')) {
+        config.fcliUrl = arg.split('=')[1];
+      } else {
+        config.fcliUrl = args[++i];
+      }
+    } else if (arg.startsWith('--fcli-path')) {
+      if (arg.includes('=')) {
+        config.fcliPath = arg.split('=')[1];
+      } else {
+        config.fcliPath = args[++i];
+      }
     } else if (arg === '--verify-signature') {
       config.verifySignature = true;
     } else if (arg === '--no-verify-signature') {
       config.verifySignature = false;
-    } else if (arg.startsWith('--signature-url=')) {
-      config.signatureUrl = arg.split('=')[1];
+    } else if (arg.startsWith('--signature-url')) {
+      if (arg.includes('=')) {
+        config.signatureUrl = arg.split('=')[1];
+      } else {
+        config.signatureUrl = args[++i];
+      }
     } else if (arg === '--reset') {
       reset = true;
     } else if (arg === '--show') {
@@ -234,8 +248,17 @@ function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>,
  */
 async function main(): Promise<void> {
   try {
-    // Show help
+    // Valid subcommands
+    const validCommands = ['config', 'run', 'env'];
+    
+    // Check for help at root level (no command or command is help flag)
     if (!command || command === '--help' || command === '-h' || command === 'help') {
+      showHelp();
+      process.exit(0);
+    }
+    
+    // Check for help with invalid command
+    if (!validCommands.includes(command) && (args.includes('--help') || args.includes('-h'))) {
       showHelp();
       process.exit(0);
     }
@@ -244,8 +267,8 @@ async function main(): Promise<void> {
     if (command === 'config') {
       const configArgs = args.slice(1);
       
-      // Show config help
-      if (configArgs[0] === '--help' || configArgs[0] === '-h') {
+      // Show config help (check for help flag anywhere in args)
+      if (configArgs.includes('--help') || configArgs.includes('-h')) {
         showConfigHelp();
         process.exit(0);
       }
@@ -276,19 +299,11 @@ async function main(): Promise<void> {
         process.exit(0);
       }
       
-      const currentConfig = loadConfig();
-      let newConfig = { ...currentConfig, ...updates };
-      
-      // Reset mutually-exclusive options when one is specified
-      if (updates.fcliUrl !== undefined) {
-        // When setting fcli-url, clear fcli-path
-        delete newConfig.fcliPath;
-      }
-      if (updates.fcliPath !== undefined) {
-        // When setting fcli-path, clear fcli-url and signature-url
-        delete newConfig.fcliUrl;
-        delete newConfig.signatureUrl;
-      }
+      // If any configuration options were provided, start fresh with defaults
+      // then apply only the specified updates. This prevents mismatches like
+      // old signature URLs being used with new fcli URLs.
+      const hasConfigUpdates = Object.keys(updates).length > 0;
+      const newConfig = hasConfigUpdates ? { ...getDefaultConfig(), ...updates } : loadConfig();
       
       saveConfig(newConfig);
       
@@ -312,18 +327,40 @@ async function main(): Promise<void> {
     if (command === 'run') {
       const actionArgs = args.slice(1);
       
-      // Show npm-specific help only (no bootstrap required)
-      if (actionArgs.length === 0 || actionArgs[0] === '--help' || actionArgs[0] === '-h') {
+      // Show npm-specific help only (no bootstrap required, check anywhere in args)
+      if (actionArgs.length === 0 || actionArgs.includes('--help') || actionArgs.includes('-h')) {
         showRunHelp();
         process.exit(0);
       }
       
-      // Show fcli action help (requires bootstrap)
-      if (actionArgs[0] === '--fcli-help') {
+      // Show fcli action help (requires bootstrap, check anywhere in args)
+      if (actionArgs.includes('--fcli-help')) {
         console.log('Bootstrapping fcli to show action help...\n');
-        const help = await getActionHelp('fortify-setup');
-        console.log(help);
-        process.exit(0);
+        try {
+          const help = await getActionHelp('fortify-setup');
+          console.log(help);
+          process.exit(0);
+        } catch (error: any) {
+          // Check if this is a bootstrap/download error vs action execution error
+          const isBootstrapError = error.message.includes('download') || error.message.includes('signature');
+          
+          if (isBootstrapError) {
+            // Bootstrap errors already have good context, just re-throw
+            throw error;
+          }
+          
+          // Action execution error - add troubleshooting
+          console.error(`\n❌ Error: Failed to get action help\n`);
+          console.error('Troubleshooting suggestions:');
+          console.error('  • This command requires fcli 3.14.0 or later');
+          const config = loadConfig();
+          if (config.fcliUrl || config.fcliPath) {
+            console.error('  • Your custom fcli may be too old or incompatible');
+            console.error('  • Try using the default version: fortify-setup config --reset');
+          }
+          console.error('');
+          process.exit(1);
+        }
       }
       
       // Run action
@@ -339,21 +376,38 @@ async function main(): Promise<void> {
     if (command === 'env') {
       const actionArgs = args.slice(1);
       
-      // Show npm-specific help only (no bootstrap required)
-      if (actionArgs.length > 0 && (actionArgs[0] === '--help' || actionArgs[0] === '-h')) {
+      // Show npm-specific help only (no bootstrap required, check anywhere in args)
+      if (actionArgs.includes('--help') || actionArgs.includes('-h')) {
         showEnvHelp();
         process.exit(0);
       }
       
-      // Show fcli action help (requires fcli access)
-      if (actionArgs.length > 0 && actionArgs[0] === '--fcli-help') {
+      // Show fcli action help (requires fcli access, check anywhere in args)
+      if (actionArgs.includes('--fcli-help')) {
         try {
           showFortifyEnvHelp();
+          process.exit(0);
         } catch (error: any) {
-          console.error(`\n❌ Error: ${error.message}\n`);
+          // If error message suggests it's not available, provide specific help
+          if (error.message.includes('No fcli available')) {
+            console.error(`\n❌ Error: ${error.message}\n`);
+            process.exit(1);
+          }
+          
+          // Otherwise show troubleshooting for compatibility issues
+          console.error(`\n❌ Error: Failed to get action help\n`);
+          console.error('Troubleshooting suggestions:');
+          console.error('  • This command requires fcli 3.14.0 or later');
+          const config = loadConfig();
+          if (config.fcliUrl || config.fcliPath) {
+            console.error('  • Your custom fcli may be too old or incompatible');
+            console.error('  • Try using the default version: fortify-setup config --reset');
+          } else {
+            console.error('  • Run the "run" command first to download and cache fcli');
+          }
+          console.error('');
           process.exit(1);
         }
-        process.exit(0);
       }
       
       // Run action (no bootstrap, use cached or configured fcli)
@@ -364,10 +418,10 @@ async function main(): Promise<void> {
       if (result.exitCode !== 0) {
         console.error(`\n❌ Error: fortify-env action failed with exit code ${result.exitCode}\n`);
         console.error('Troubleshooting suggestions:');
-        console.error('  • Verify action options are correct (run with --fcli-help to see available options)');
+        console.error('  • Verify your action options are correct (run with --fcli-help to see available options)');
         if (result.bootstrap.source === 'configured' || result.bootstrap.source === 'preinstalled') {
-          console.error('  • Custom fcli may be incompatible (requires fcli 3.14.0+, same major version)');
-          console.error('  • Try using default download instead: fortify-setup config --reset');
+          console.error('  • Your custom fcli may be too old or incompatible (requires fcli 3.14.0 or later)');
+          console.error('  • Try using the default version: fortify-setup config --reset');
         }
         console.error('');
       }
