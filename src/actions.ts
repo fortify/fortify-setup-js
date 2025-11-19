@@ -91,7 +91,7 @@ export async function runFortifySetup(options: RunActionOptions = {}): Promise<R
   }
   
   // Run fortify-setup action with --self and --self-type
-  const selfArgs = `--self "${bootstrap.fcliPath}" --self-type ${bootstrap.selfType}`;
+  const selfArgs = `"--self=${bootstrap.fcliPath}"`;
   const cmd = `"${bootstrap.fcliPath}" action run fortify-setup ${selfArgs} ${args.join(' ')}`;
   
   try {
