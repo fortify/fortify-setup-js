@@ -59,7 +59,6 @@ jobs:
         id: release
         with:
           release-type: node
-          package-name: '@fortify/setup'
       
       - name: Checkout code (if release created)
         if: ${{ steps.release.outputs.release_created }}
