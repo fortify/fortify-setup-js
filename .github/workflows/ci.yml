@@ -48,6 +48,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      pull-requests: write
+      packages: write
     
     steps:
       - name: Create Release PR or Publish Release
@@ -61,12 +65,13 @@ jobs:
         if: ${{ steps.release.outputs.release_created }}
         uses: actions/checkout@v4
       
-      - name: Setup Node.js (if release created)
+      - name: Setup Node.js for GitHub Packages (if release created)
         if: ${{ steps.release.outputs.release_created }}
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@fortify'
       
       - name: Install dependencies (if release created)
         if: ${{ steps.release.outputs.release_created }}
@@ -76,20 +81,36 @@ jobs:
         if: ${{ steps.release.outputs.release_created }}
         run: npm run build
       
-      # TODO: Uncomment when npm credentials are configured
-      # - name: Publish to npm
-      #   if: ${{ steps.release.outputs.release_created }}
-      #   run: npm publish
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish to GitHub Packages
+        if: ${{ steps.release.outputs.release_created }}
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Publish to npm (DISABLED - Configure NPM_TOKEN first)
+      - name: Setup Node.js for npm (if release created and npm enabled)
+        if: ${{ steps.release.outputs.release_created && vars.PUBLISH_TO_NPM == 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Publish to npm
+        if: ${{ steps.release.outputs.release_created && vars.PUBLISH_TO_NPM == 'true' }}
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Publish summary
         if: ${{ steps.release.outputs.release_created }}
         run: |
-          echo "⚠️  npm publishing is disabled"
-          echo "To enable:"
-          echo "  1. Create npm token: https://www.npmjs.com/settings/YOUR_USERNAME/tokens"
-          echo "  2. Add NPM_TOKEN secret to GitHub repository"
-          echo "  3. Uncomment the 'Publish to npm' step in .github/workflows/ci.yml"
-          echo ""
-          echo "Package would be published as: @fortify/setup@${{ steps.release.outputs.version }}"
+          echo "✓ Published @fortify/setup@${{ steps.release.outputs.version }} to GitHub Packages"
+          if [ "${{ vars.PUBLISH_TO_NPM }}" == "true" ]; then
+            echo "✓ Published @fortify/setup@${{ steps.release.outputs.version }} to npm"
+          else
+            echo ""
+            echo "ℹ️  npm publishing is disabled"
+            echo "To enable:"
+            echo "  1. Create npm token: https://www.npmjs.com/settings/YOUR_USERNAME/tokens"
+            echo "  2. Add NPM_TOKEN secret to GitHub repository"
+            echo "  3. Set PUBLISH_TO_NPM repository variable to 'true'"
+          fi
