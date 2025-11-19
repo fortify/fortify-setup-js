@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.2](https://github.com/fortify/fortify-setup-js/compare/v0.0.1...v0.0.2) (2025-11-19)
+
+
+### Bug Fixes
+
+* Remove obsolete --self-type option ([d131940](https://github.com/fortify/fortify-setup-js/commit/d1319407ecf9c42f34e8827116b5961b93c8b98f))
+
 ## 0.0.1 (2025-11-19)
 
 
