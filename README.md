@@ -11,6 +11,19 @@
 
 <!-- START-INCLUDE:repo-intro.md -->
 
+
+## WORK IN PROGRESS
+
+This is still work in progress and should not be used for production purposes. It requires new fcli features that have not yet been released. To test, you will need the fcli development release located here: https://github.com/fortify/fcli/releases/tag/dev_feat.ci-updates
+
+You have two options:
+1. Manually pre-install fcli from the link above, then run `npx @fortify/setup config --fcli-path=<path to pre-installed fcli>`
+2. Configure `@fortify/setup` with the proper download URL, for example, for Linux, `npx @fortify/setup config --fcli-url=https://github.com/fortify/fcli/releases/download/dev_feat.ci-updates/fcli-linux.tgz`
+
+Once you've configured the above, you can use `npx @fortify/setup run` to bootstrap fcli and install Fortify tools, followed by `npx @fortify/setup env` to generate appropriate environment variables. Note that the latter will still undergo significant changes on the fcli side.
+
+## Introduction
+
 The `@fortify/setup` npm package provides a lightweight, zero-dependency utility for bootstrapping [fcli](https://github.com/fortify/fcli) and running the fortify-setup action in any environment.
 
 **Key Features:**
@@ -41,18 +54,13 @@ The `@fortify/setup` npm package provides a lightweight, zero-dependency utility
 
 <!-- START-INCLUDE:repo-resources.md -->
 
-## Resources
-
-### Related Links
-
 * **Release Notes**: https://github.com/fortify/fortify-setup-js/releases
 * **GitHub Repository**: https://github.com/fortify/fortify-setup-js
 * **Online Documentation**: https://fortify.github.io/fortify-setup-js
 * **Fcli Documentation**: https://github.com/fortify/fcli
-
-### Fortify Documentation
-
-This documentation covers the open-source `@fortify/setup` npm package. For Fortify product documentation and resources, please visit [Fortify Documentation](https://www.microfocus.com/documentation/fortify-software-security-center/).
+* **Contributing Guidelines**: [CONTRIBUTING.md](CONTRIBUTING.md)
+* **Code of Conduct**: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+* **License**: [LICENSE.txt](LICENSE.txt)
 
 <!-- END-INCLUDE:repo-resources.md -->
 
