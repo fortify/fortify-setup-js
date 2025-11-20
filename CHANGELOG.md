@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.3](https://github.com/fortify/fortify-setup-js/compare/v0.0.2...v0.0.3) (2025-11-20)
+
+
+### Bug Fixes
+
+* Add WIP disclaimer ([5167a06](https://github.com/fortify/fortify-setup-js/commit/5167a065838f32dacb91b2efe596d9d15df4f90d))
+
 ## [0.0.2](https://github.com/fortify/fortify-setup-js/compare/v0.0.1...v0.0.2) (2025-11-19)
 
 
