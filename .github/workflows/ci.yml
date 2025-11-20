@@ -65,12 +65,11 @@ jobs:
         if: ${{ steps.release.outputs.release_created }}
         uses: actions/checkout@v4
       
-      - name: Setup Node.js for GitHub Packages (if release created)
+      - name: Setup Node.js (if release created)
         if: ${{ steps.release.outputs.release_created }}
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          registry-url: 'https://npm.pkg.github.com'
       
       - name: Install dependencies (if release created)
         if: ${{ steps.release.outputs.release_created }}
@@ -82,20 +81,13 @@ jobs:
       
       - name: Publish to GitHub Packages
         if: ${{ steps.release.outputs.release_created }}
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public --registry https://npm.pkg.github.com
         env:
           NODE_AUTH_TOKEN: ${{ github.token }}
       
-      - name: Setup Node.js for npm
-        if: ${{ steps.release.outputs.release_created }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-      
       - name: Publish to npm
         if: ${{ steps.release.outputs.release_created && env.NODE_AUTH_TOKEN != '' }}
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public --registry https://registry.npmjs.org
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_PUBLISH_TOKEN }}
       
