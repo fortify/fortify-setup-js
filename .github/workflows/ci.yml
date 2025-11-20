@@ -83,7 +83,7 @@ jobs:
       
       - name: Publish to GitHub Packages
         if: ${{ steps.release.outputs.release_created }}
-        run: npm publish --provenance
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
@@ -96,7 +96,7 @@ jobs:
       
       - name: Publish to npm
         if: ${{ steps.release.outputs.release_created && env.NODE_AUTH_TOKEN != '' }}
-        run: npm publish --provenance
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_PUBLISH_TOKEN }}
       
