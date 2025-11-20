@@ -52,6 +52,7 @@ jobs:
       contents: write
       pull-requests: write
       packages: write
+      id-token: write
     
     steps:
       - name: Create Release PR or Publish Release
@@ -82,34 +83,32 @@ jobs:
       
       - name: Publish to GitHub Packages
         if: ${{ steps.release.outputs.release_created }}
-        run: npm publish
+        run: npm publish --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Setup Node.js for npm (if release created and npm enabled)
-        if: ${{ steps.release.outputs.release_created && vars.PUBLISH_TO_NPM == 'true' }}
+      - name: Setup Node.js for npm
+        if: ${{ steps.release.outputs.release_created && secrets.NPMJS_PUBLISH_TOKEN != '' }}
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
       
       - name: Publish to npm
-        if: ${{ steps.release.outputs.release_created && vars.PUBLISH_TO_NPM == 'true' }}
-        run: npm publish
+        if: ${{ steps.release.outputs.release_created && secrets.NPMJS_PUBLISH_TOKEN != '' }}
+        run: npm publish --provenance
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPMJS_PUBLISH_TOKEN }}
       
       - name: Publish summary
         if: ${{ steps.release.outputs.release_created }}
         run: |
           echo "✓ Published @fortify/setup@${{ steps.release.outputs.version }} to GitHub Packages"
-          if [ "${{ vars.PUBLISH_TO_NPM }}" == "true" ]; then
+          if [ -n "$NPMJS_PUBLISH_TOKEN" ]; then
             echo "✓ Published @fortify/setup@${{ steps.release.outputs.version }} to npm"
           else
             echo ""
-            echo "ℹ️  npm publishing is disabled"
-            echo "To enable:"
-            echo "  1. Create npm token: https://www.npmjs.com/settings/YOUR_USERNAME/tokens"
-            echo "  2. Add NPM_TOKEN secret to GitHub repository"
-            echo "  3. Set PUBLISH_TO_NPM repository variable to 'true'"
+            echo "ℹ️  npm publishing skipped (NPMJS_PUBLISH_TOKEN secret not set)"
           fi
+        env:
+          NPMJS_PUBLISH_TOKEN: ${{ secrets.NPMJS_PUBLISH_TOKEN }}
