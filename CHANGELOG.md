@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.12](https://github.com/fortify/fortify-setup-js/compare/v0.0.11...v0.0.12) (2025-11-20)
+
+
+### Bug Fixes
+
+* Fix publishing ([bb37e08](https://github.com/fortify/fortify-setup-js/commit/bb37e08ed399fe52d72dba1517f31f3d5f63e183))
+
 ## [0.0.11](https://github.com/fortify/fortify-setup-js/compare/v0.0.10...v0.0.11) (2025-11-20)
 
 
