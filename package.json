@@ -28,7 +28,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/fortify/fortify-setup-js.git"
+    "url": "git+https://github.com/fortify/fortify-setup-js.git"
   },
   "bugs": {
     "url": "https://github.com/fortify/fortify-setup-js/issues"
