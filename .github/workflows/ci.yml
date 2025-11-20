@@ -71,7 +71,6 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://npm.pkg.github.com'
-          scope: '@fortify'
       
       - name: Install dependencies (if release created)
         if: ${{ steps.release.outputs.release_created }}
@@ -85,7 +84,7 @@ jobs:
         if: ${{ steps.release.outputs.release_created }}
         run: npm publish --provenance --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ github.token }}
       
       - name: Setup Node.js for npm
         if: ${{ steps.release.outputs.release_created }}
