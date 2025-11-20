@@ -72,6 +72,10 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
       
+      - name: Update npm (if release created)
+        if: ${{ steps.release.outputs.release_created }}
+        run: npm install -g npm@latest
+      
       - name: Install dependencies (if release created)
         if: ${{ steps.release.outputs.release_created }}
         run: npm ci
