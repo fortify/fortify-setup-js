@@ -88,22 +88,11 @@ jobs:
           NODE_AUTH_TOKEN: ${{ github.token }}
       
       - name: Publish to npm
-        if: ${{ steps.release.outputs.release_created && env.NODE_AUTH_TOKEN != '' }}
-        run: |
-          npm config set //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
-          npm publish --provenance --access public --registry https://registry.npmjs.org
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPMJS_PUBLISH_TOKEN }}
+        if: ${{ steps.release.outputs.release_created }}
+        run: npm publish --provenance --access public --registry https://registry.npmjs.org
       
       - name: Publish summary
         if: ${{ steps.release.outputs.release_created }}
         run: |
           echo "✓ Published @fortify/setup@${{ steps.release.outputs.version }} to GitHub Packages"
-          if [ -n "$NODE_AUTH_TOKEN" ]; then
-            echo "✓ Published @fortify/setup@${{ steps.release.outputs.version }} to npm"
-          else
-            echo ""
-            echo "ℹ️  npm publishing skipped (NPMJS_PUBLISH_TOKEN secret not set)"
-          fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPMJS_PUBLISH_TOKEN }}
+          echo "✓ Published @fortify/setup@${{ steps.release.outputs.version }} to npm"
