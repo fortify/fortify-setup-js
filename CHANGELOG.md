@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.8](https://github.com/fortify/fortify-setup-js/compare/v0.0.7...v0.0.8) (2025-11-20)
+
+
+### Bug Fixes
+
+* Use trusted publisher ([40e41d5](https://github.com/fortify/fortify-setup-js/commit/40e41d5f1824df235c27eb4efc6c8a7fe49bda8c))
+
 ## [0.0.7](https://github.com/fortify/fortify-setup-js/compare/v0.0.6...v0.0.7) (2025-11-20)
 
 
