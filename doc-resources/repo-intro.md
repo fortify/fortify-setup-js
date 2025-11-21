@@ -7,7 +7,7 @@ You have two options:
 1. Manually pre-install fcli from the link above, then run `npx @fortify/setup config --fcli-path=<path to pre-installed fcli>`
 2. Configure `@fortify/setup` with the proper download URL, for example, for Linux, `npx @fortify/setup config --fcli-url=https://github.com/fortify/fcli/releases/download/dev_feat.ci-updates/fcli-linux.tgz`
 
-Once you've configured the above, you can use `npx @fortify/setup run` to bootstrap fcli and install Fortify tools, followed by `npx @fortify/setup env` to generate appropriate environment variables. Note that the latter will still undergo significant changes on the fcli side.
+Once you've configured the above, you can use `npx @fortify/setup install` to bootstrap fcli and install Fortify tools, followed by `npx @fortify/setup env` to generate appropriate environment variables. Note that the latter will still undergo significant changes on the fcli side.
 
 ## Introduction
 
@@ -21,7 +21,7 @@ The `@fortify/setup` npm package provides a lightweight, zero-dependency utility
 * Multi-platform support (Linux, macOS, Windows)
 * Three-tier configuration (file, environment variables, CLI arguments)
 * CI/CD tool cache integration (GitHub Actions, Azure DevOps, GitLab)
-* Simple command structure: `configure`, `refresh-cache`, `clear-cache`, `run`
+* Simple command structure: `configure`, `refresh-cache`, `clear-cache`, `install`
 * **TypeScript library API** for building custom integrations
 * **Complete examples** for GitHub Actions, Azure DevOps, and GitLab CI
 

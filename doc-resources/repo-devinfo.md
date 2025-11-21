@@ -27,12 +27,12 @@ npm run clean && npm run build
 
 # Test commands
 node dist/cli.js configure --cache-enabled
-node dist/cli.js run --help
-node dist/cli.js run --fcli=latest
+node dist/cli.js install --help
+node dist/cli.js install --fcli=latest
 
 # Install globally for testing
 npm link
-fortify-setup run --fcli=latest
+fortify-setup install --fcli=latest
 ```
 
 ### Release Process

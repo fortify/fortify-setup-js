@@ -6,7 +6,7 @@
  */
 
 import { execSync } from 'child_process';
-import { runFortifySetup, runFortifyEnv, getActionHelp, showFortifyEnvHelp } from './actions.js';
+import { runFortifySetup, runFortifyEnv, getFcliPathForEnv } from './actions.js';
 import { loadConfig, saveConfig, getDefaultConfig } from './config.js';
 import type { BootstrapConfig } from './types.js';
 
@@ -21,7 +21,7 @@ function showHelp(): void {
 @fortify/setup
 
 NPM package that bootstraps a predefined fcli version and runs the fcli
-fortify-setup action to detect, register, and install Fortify tools for
+tool setup command to detect, register, and install Fortify tools for
 use in CI/CD workflows.
 
 USAGE
@@ -29,13 +29,13 @@ USAGE
 
 COMMANDS
   config        Configure fcli bootstrap settings
-  run [options] Bootstrap fcli and run fortify-setup action (default)
-  env [options] Generate environment variables for installed Fortify tools
+  install       Install/setup Fortify tools
+  env           Generate environment variables for installed Fortify tools
 
 Run 'npx @fortify/setup <command> --help' for more information on a command.
 
 NOTE
-  The 'run' command always re-downloads to ensure latest fcli version is used.
+  The 'install' command always re-downloads to ensure latest fcli version is used.
   The downloaded fcli is saved to an internal cache for use by the 'env' command.
 `);
 }
@@ -54,6 +54,7 @@ USAGE
   npx @fortify/setup config [options]
 
 OPTIONS
+  --help|-h                   Show this help information
   --fcli-url=<url>              Full URL to fcli archive (platform-specific)
                                 Example: https://github.com/fortify/fcli/releases/download/v3/fcli-linux.tgz
   --fcli-rsa-sha256-url=<url>   Full URL to RSA SHA256 signature file
@@ -99,20 +100,23 @@ EXAMPLES
 }
 
 /**
- * Show run command help
+ * Show install command help
  */
-function showRunHelp(): void {
+function showInstallHelp(): void {
   console.log(`
-Bootstrap fcli and run fortify-setup action
+Install/setup Fortify tools
 
 Bootstrapping downloads a predefined fcli version that's then used to run
-the fcli fortify-setup action.
+the fcli tool setup command.
 
 USAGE
-  npx @fortify/setup run [options]
-  npx @fortify/setup run --fcli-help    Show fcli action help (requires bootstrap)
+  npx @fortify/setup install [options]
 
-All options are passed through to the fortify-setup action.
+All options are passed through to the tool setup command.
+
+OPTIONS
+  --help|-h                   Show this help information
+  --fcli-help                 Show fcli tool setup help
 
 BOOTSTRAP BEHAVIOR
   Bootstrap searches for fcli in the following order:
@@ -125,19 +129,19 @@ BOOTSTRAP BEHAVIOR
 
 EXAMPLES
   # Install ScanCentral Client
-  npx @fortify/setup run --sc-client=latest
+  npx @fortify/setup install --tools=sc-client
   
   # Install multiple tools
-  npx @fortify/setup run --fcli=latest --sc-client=24.4.0
+  npx @fortify/setup install --tools=fcli,sc-client
   
   # Use CI/CD tool cache
-  npx @fortify/setup run --use-tool-cache --sc-client=latest
+  npx @fortify/setup install --tools=sc-client --tool-cache-pattern=/tmp/cache/{tool}/{version}
   
   # Air-gapped mode (pre-installed tools only)
-  npx @fortify/setup run --air-gapped --sc-client=auto
+  npx @fortify/setup install --tools=sc-client --air-gapped
   
-  # Show complete fcli action help
-  npx @fortify/setup run --fcli-help
+  # Show fcli tool setup help
+  npx @fortify/setup install --fcli-help
 `);
 }
 
@@ -152,33 +156,38 @@ Outputs environment variable definitions for installed Fortify tools in various
 formats suitable for sourcing in shells or setting through CI/CD systems.
 
 USAGE
-  npx @fortify/setup env [options]
-  npx @fortify/setup env --fcli-help    Show fcli action help (requires bootstrap)
+  npx @fortify/setup env <type> [options]
 
-All options are passed through to the fortify-env action.
+The <type> parameter specifies the output format (e.g., shell, github, ado, gitlab).
+
+OPTIONS
+  --help|-h                   Show this help information
+  --fcli-help                 Show fcli tool env help (fortify-setup env --fcli-help shows
+                             information on available types, fortify-setup env <type> --fcli-help
+                             shows help for that specific type)
 
 PREREQUISITE
   The 'env' command does NOT bootstrap or download fcli. It requires one of:
-  1. The 'run' command has been executed (uses cached fcli from last run)
+  1. The 'install' command has been executed (uses cached fcli from last run)
   2. Pre-installed fcli configured via 'config --fcli-path' or env vars
 
   If neither is available, the command will fail with an error.
 
 EXAMPLES
   # Generate env for all installed tools (shell format)
-  npx @fortify/setup env
+  npx @fortify/setup env shell
   
   # Generate env for specific tools with versions
-  npx @fortify/setup env --sc-client 24.4.0 --fcli latest
+  npx @fortify/setup env shell --tools=sc-client:24.4.0
   
   # Generate env for GitHub Actions
-  npx @fortify/setup env --format github
+  npx @fortify/setup env github
   
   # Use in shell (bash/zsh)
-  source <(npx @fortify/setup env)
+  source <(npx @fortify/setup env shell)
   
-  # Show complete fcli action help
-  npx @fortify/setup env --fcli-help
+  # Show fcli tool env help
+  npx @fortify/setup env shell --fcli-help
 `);
 }
 
@@ -249,7 +258,7 @@ function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>,
 async function main(): Promise<void> {
   try {
     // Valid subcommands
-    const validCommands = ['config', 'run', 'env'];
+    const validCommands = ['config', 'install', 'env'];
     
     // Check for help at root level (no command or command is help flag)
     if (!command || command === '--help' || command === '-h' || command === 'help') {
@@ -269,6 +278,12 @@ async function main(): Promise<void> {
       
       // Show config help (check for help flag anywhere in args)
       if (configArgs.includes('--help') || configArgs.includes('-h')) {
+        showConfigHelp();
+        process.exit(0);
+      }
+      
+      // If no arguments provided, show help
+      if (configArgs.length === 0) {
         showConfigHelp();
         process.exit(0);
       }
@@ -323,44 +338,14 @@ async function main(): Promise<void> {
       process.exit(0);
     }
     
-    // Run fortify-setup action
-    if (command === 'run') {
+    // Install/setup Fortify tools
+    if (command === 'install') {
       const actionArgs = args.slice(1);
       
       // Show npm-specific help only (no bootstrap required, check anywhere in args)
       if (actionArgs.length === 0 || actionArgs.includes('--help') || actionArgs.includes('-h')) {
-        showRunHelp();
+        showInstallHelp();
         process.exit(0);
-      }
-      
-      // Show fcli action help (requires bootstrap, check anywhere in args)
-      if (actionArgs.includes('--fcli-help')) {
-        console.log('Bootstrapping fcli to show action help...\n');
-        try {
-          const help = await getActionHelp('fortify-setup');
-          console.log(help);
-          process.exit(0);
-        } catch (error: any) {
-          // Check if this is a bootstrap/download error vs action execution error
-          const isBootstrapError = error.message.includes('download') || error.message.includes('signature');
-          
-          if (isBootstrapError) {
-            // Bootstrap errors already have good context, just re-throw
-            throw error;
-          }
-          
-          // Action execution error - add troubleshooting
-          console.error(`\n❌ Error: Failed to get action help\n`);
-          console.error('Troubleshooting suggestions:');
-          console.error('  • This command requires fcli 3.14.0 or later');
-          const config = loadConfig();
-          if (config.fcliUrl || config.fcliPath) {
-            console.error('  • Your custom fcli may be too old or incompatible');
-            console.error('  • Try using the default version: fortify-setup config --reset');
-          }
-          console.error('');
-          process.exit(1);
-        }
       }
       
       // Run action
@@ -382,48 +367,23 @@ async function main(): Promise<void> {
         process.exit(0);
       }
       
-      // Show fcli action help (requires fcli access, check anywhere in args)
-      if (actionArgs.includes('--fcli-help')) {
-        try {
-          showFortifyEnvHelp();
-          process.exit(0);
-        } catch (error: any) {
-          // If error message suggests it's not available, provide specific help
-          if (error.message.includes('No fcli available')) {
-            console.error(`\n❌ Error: ${error.message}\n`);
-            process.exit(1);
-          }
-          
-          // Otherwise show troubleshooting for compatibility issues
-          console.error(`\n❌ Error: Failed to get action help\n`);
-          console.error('Troubleshooting suggestions:');
-          console.error('  • This command requires fcli 3.14.0 or later');
-          const config = loadConfig();
-          if (config.fcliUrl || config.fcliPath) {
-            console.error('  • Your custom fcli may be too old or incompatible');
-            console.error('  • Try using the default version: fortify-setup config --reset');
-          } else {
-            console.error('  • Run the "run" command first to download and cache fcli');
-          }
-          console.error('');
-          process.exit(1);
-        }
-      }
-      
       // Run action (no bootstrap, use cached or configured fcli)
       const result = await runFortifyEnv({
         args: actionArgs
       });
       
       if (result.exitCode !== 0) {
-        console.error(`\n❌ Error: fortify-env action failed with exit code ${result.exitCode}\n`);
+        console.error(`\n❌ Error: tool env command failed with exit code ${result.exitCode}\n`);
         console.error('Troubleshooting suggestions:');
-        console.error('  • Verify your action options are correct (run with --fcli-help to see available options)');
+        console.error('  • Verify your type and options are correct');
         if (result.bootstrap.source === 'configured' || result.bootstrap.source === 'preinstalled') {
           console.error('  • Your custom fcli may be too old or incompatible (requires fcli 3.14.0 or later)');
           console.error('  • Try using the default version: fortify-setup config --reset');
         }
         console.error('');
+      } else {
+        // Print the environment variable output
+        console.log(result.output);
       }
       
       process.exit(result.exitCode);

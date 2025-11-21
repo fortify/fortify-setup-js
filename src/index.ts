@@ -5,7 +5,7 @@
 
 export { bootstrapFcli, getLastDownloadedFcliPath } from './bootstrap.js';
 export { loadConfig, saveConfig, getDefaultConfig, getEffectiveConfig } from './config.js';
-export { runFortifySetup, runFortifyEnv, getActionHelp } from './actions.js';
+export { runFortifySetup, runFortifyEnv } from './actions.js';
 export type {
   BootstrapConfig,
   BootstrapOptions,

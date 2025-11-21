@@ -65,13 +65,13 @@ export interface RunActionResult {
  * 
  * // Install ScanCentral Client
  * await runFortifySetup({
- *   args: ['--sc-client=latest'],
+ *   args: ['--tools=sc-client'],
  *   verbose: true
  * });
  * 
  * // Install multiple tools
  * await runFortifySetup({
- *   args: ['--fcli=latest', '--sc-client=24.4.0']
+ *   args: ['--tools=fcli,sc-client']
  * });
  * ```
  */
@@ -87,12 +87,11 @@ export async function runFortifySetup(options: RunActionOptions = {}): Promise<R
   
   if (verbose) {
     console.log(`✓ Using fcli ${bootstrap.version} (source: ${bootstrap.source})\n`);
-    console.log('Running fortify-setup action...\n');
+    console.log('Running tool setup...\n');
   }
   
-  // Run fortify-setup action with --self and --self-type
-  const selfArgs = `"--self=${bootstrap.fcliPath}"`;
-  const cmd = `"${bootstrap.fcliPath}" action run fortify-setup ${selfArgs} ${args.join(' ')}`;
+  // Run fcli tool setup command
+  const cmd = `"${bootstrap.fcliPath}" tool setup "--self={bootstrap.fcliPath}" ${args.join(' ')}`;
   
   try {
     execSync(cmd, { stdio: verbose ? 'inherit' : 'pipe' });
@@ -102,15 +101,26 @@ export async function runFortifySetup(options: RunActionOptions = {}): Promise<R
     };
   } catch (error: any) {
     if (verbose) {
-      console.error('\n❌ fortify-setup action failed\n');
+      console.error('\n❌ Tool setup failed\n');
       console.error('Troubleshooting suggestions:');
-      console.error('  • Verify your action options are correct (run with --fcli-help to see available options)');
+      console.error('  • Verify your tool options are correct');
       if (bootstrap.source === 'configured' || bootstrap.source === 'preinstalled') {
         console.error('  • Your custom fcli may be too old or incompatible (requires fcli 3.14.0 or later)');
         console.error('  • Try using the default version: fortify-setup config --reset');
       }
       console.error('');
     }
+    
+    // Show command output on failure
+    if (error.stderr) {
+      console.error('Error output from fcli command:');
+      console.error(error.stderr);
+    }
+    if (error.stdout) {
+      console.error('Standard output from fcli command:');
+      console.error(error.stdout);
+    }
+    
     return {
       bootstrap,
       exitCode: error.status || 1
@@ -133,15 +143,17 @@ export async function runFortifySetup(options: RunActionOptions = {}): Promise<R
  * import { runFortifySetup, runFortifyEnv } from '@fortify/setup';
  * 
  * // First run setup to download fcli
- * await runFortifySetup({ args: ['--sc-client=latest'] });
+ * await runFortifySetup({ args: ['--tools=sc-client'] });
  * 
  * // Then get environment variables
- * const result = await runFortifyEnv();
+ * const result = await runFortifyEnv({
+ *   args: ['shell']
+ * });
  * console.log(result.output); // Environment variable definitions
  * 
  * // Get env for specific tools with versions
  * await runFortifyEnv({
- *   args: ['--sc-client', '24.4.0', '--format', 'github']
+ *   args: ['github', '--tools=sc-client:24.4.0']
  * });
  * ```
  */
@@ -164,8 +176,8 @@ export async function runFortifyEnv(options: RunActionOptions = {}): Promise<Run
     selfType: getLastDownloadedFcliPath() ? 'unstable' : 'stable'
   };
   
-  // Run fortify-env action
-  const cmd = `"${fcliPath}" action run fortify-env ${args.join(' ')}`;
+  // Run fcli tool env command
+  const cmd = `"${fcliPath}" tool env ${args.join(' ')}`;
   
   try {
     const output = execSync(cmd, { encoding: 'utf-8' });
@@ -180,40 +192,6 @@ export async function runFortifyEnv(options: RunActionOptions = {}): Promise<Run
       exitCode: error.status || 1,
       output: error.stdout || ''
     };
-  }
-}
-
-/**
- * Get help for an fcli action
- * 
- * @param actionName - Name of the action (e.g., 'fortify-setup', 'fortify-env')
- * @param options - Bootstrap options
- * @returns Promise with help text
- * 
- * @example
- * ```typescript
- * import { getActionHelp } from '@fortify/setup';
- * 
- * const help = await getActionHelp('fortify-setup');
- * console.log(help);
- * ```
- */
-export async function getActionHelp(
-  actionName: string,
-  options: BootstrapOptions = {}
-): Promise<string> {
-  const bootstrap = await bootstrapFcli(options);
-  const cmd = `"${bootstrap.fcliPath}" action help ${actionName}`;
-  
-  try {
-    return execSync(cmd, { encoding: 'utf-8' });
-  } catch (error: any) {
-    // Enrich error with context about source
-    let errorMsg = `Failed to get help for action '${actionName}': ${error.message}`;
-    if (bootstrap.source === 'configured' || bootstrap.source === 'preinstalled') {
-      errorMsg += ` (using ${bootstrap.source} fcli at ${bootstrap.fcliPath})`;
-    }
-    throw new Error(errorMsg);
   }
 }
 
@@ -251,20 +229,4 @@ export function getFcliPathForEnv(): string | null {
   }
   
   return fcliPath;
-}
-
-/**
- * Show help for fortify-env action (without bootstrapping)
- * Uses cached or pre-installed fcli
- * 
- * @throws Error if no fcli is available
- */
-export function showFortifyEnvHelp(): void {
-  const fcliPath = getFcliPathForEnv();
-  
-  if (!fcliPath) {
-    throw new Error('No fcli available. Run the \'run\' command first or configure a pre-installed fcli path.');
-  }
-  
-  execSync(`"${fcliPath}" action help fortify-env`, { stdio: 'inherit' });
 }
