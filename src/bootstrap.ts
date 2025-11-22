@@ -46,18 +46,16 @@ function getFcliArchiveName(): string {
 }
 
 /**
- * Get fcli binary name
+ * Get fcli binary name for current platform
  */
-function getFcliBinaryName(): string {
+export function getFcliBinaryName(): string {
   return os.platform() === 'win32' ? 'fcli.exe' : 'fcli';
 }
-
-
 
 /**
  * Get fcli version from executable
  */
-async function getFcliVersion(fcliPath: string): Promise<string | null> {
+export async function getFcliVersion(fcliPath: string): Promise<string | null> {
   try {
     const { stdout } = await execAsync(`"${fcliPath}" --version`, { timeout: 5000 });
     const match = stdout.match(/(\d+\.\d+\.\d+)/);
@@ -65,6 +63,24 @@ async function getFcliVersion(fcliPath: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Resolve fcli path from environment variables
+ * Checks FCLI, FCLI_CMD, and FCLI_HOME environment variables
+ */
+export function getFcliPathFromEnv(): string | null {
+  const fcliEnv = process.env.FCLI || process.env.FCLI_CMD || process.env.FCLI_HOME;
+  if (!fcliEnv) {
+    return null;
+  }
+  
+  // FCLI_HOME might be a directory, check for binary inside
+  const potentialPath = fs.existsSync(fcliEnv) && fs.statSync(fcliEnv).isDirectory()
+    ? path.join(fcliEnv, 'bin', getFcliBinaryName())
+    : fcliEnv;
+    
+  return fs.existsSync(potentialPath) ? potentialPath : null;
 }
 
 
@@ -288,28 +304,19 @@ export async function bootstrapFcli(options: BootstrapOptions = {}): Promise<Boo
     return {
       fcliPath: config.fcliPath,
       version,
-      source: 'configured',
-      selfType: 'stable'
+      source: 'configured'
     };
   }
   
   // 2. Check FCLI-specific environment variables for pre-installed fcli
-  const fcliEnv = process.env.FCLI || process.env.FCLI_CMD || process.env.FCLI_HOME;
-  if (fcliEnv) {
-    // FCLI_HOME might be a directory, check for binary inside
-    const fcliPath = fs.existsSync(fcliEnv) && fs.statSync(fcliEnv).isDirectory()
-      ? path.join(fcliEnv, 'bin', getFcliBinaryName())
-      : fcliEnv;
-    
-    if (fs.existsSync(fcliPath)) {
-      const version = await getFcliVersion(fcliPath) || 'unknown';
-      return {
-        fcliPath,
-        version,
-        source: 'preinstalled',
-        selfType: 'stable'
-      };
-    }
+  const envFcliPath = getFcliPathFromEnv();
+  if (envFcliPath) {
+    const version = await getFcliVersion(envFcliPath) || 'unknown';
+    return {
+      fcliPath: envFcliPath,
+      version,
+      source: 'preinstalled'
+    };
   }
   
   // 3. Download fcli (always re-downloads latest v3.x to ensure latest version is used)
@@ -319,7 +326,6 @@ export async function bootstrapFcli(options: BootstrapOptions = {}): Promise<Boo
   return {
     fcliPath,
     version,
-    source: 'download',
-    selfType: 'unstable'
+    source: 'download'
   };
 }

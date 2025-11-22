@@ -4,26 +4,12 @@
  */
 
 import { execSync } from 'child_process';
-import { bootstrapFcli, getLastDownloadedFcliPath } from './bootstrap.js';
+import { bootstrapFcli, getLastDownloadedFcliPath, getFcliVersion, getFcliPathFromEnv } from './bootstrap.js';
 import { getEffectiveConfig } from './config.js';
 import type { BootstrapOptions, BootstrapResult } from './types.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-
-// Helper to get fcli version (avoid circular import)
-async function getFcliVersion(fcliPath: string): Promise<string | null> {
-  try {
-    const { stdout } = require('child_process').execSync(`"${fcliPath}" --version`, { 
-      encoding: 'utf-8',
-      timeout: 5000 
-    });
-    const match = stdout.match(/(\d+\.\d+\.\d+)/);
-    return match ? `v${match[1]}` : null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Options for running actions
@@ -91,7 +77,7 @@ export async function runFortifySetup(options: RunActionOptions = {}): Promise<R
   }
   
   // Run fcli tool setup command
-  const cmd = `"${bootstrap.fcliPath}" tool setup "--self={bootstrap.fcliPath}" ${args.join(' ')}`;
+  const cmd = `"${bootstrap.fcliPath}" tool setup "--self=${bootstrap.fcliPath}" ${args.join(' ')}`;
   
   try {
     execSync(cmd, { stdio: verbose ? 'inherit' : 'pipe' });
@@ -101,14 +87,7 @@ export async function runFortifySetup(options: RunActionOptions = {}): Promise<R
     };
   } catch (error: any) {
     if (verbose) {
-      console.error('\n❌ Tool setup failed\n');
-      console.error('Troubleshooting suggestions:');
-      console.error('  • Verify your tool options are correct');
-      if (bootstrap.source === 'configured' || bootstrap.source === 'preinstalled') {
-        console.error('  • Your custom fcli may be too old or incompatible (requires fcli 3.14.0 or later)');
-        console.error('  • Try using the default version: fortify-setup config --reset');
-      }
-      console.error('');
+      showTroubleshootingMessage('Tool setup failed', bootstrap.source);
     }
     
     // Show command output on failure
@@ -126,6 +105,20 @@ export async function runFortifySetup(options: RunActionOptions = {}): Promise<R
       exitCode: error.status || 1
     };
   }
+}
+
+/**
+ * Display troubleshooting message for fcli command failures
+ */
+function showTroubleshootingMessage(context: string, source: string): void {
+  console.error(`\n❌ ${context}\n`);
+  console.error('Troubleshooting suggestions:');
+  console.error('  • Verify your options are correct');
+  if (source === 'configured' || source === 'preinstalled') {
+    console.error('  • Your custom fcli may be too old or incompatible (requires fcli 3.14.0 or later)');
+    console.error('  • Try using the default version: fortify-setup config --reset');
+  }
+  console.error('');
 }
 
 /**
@@ -172,8 +165,7 @@ export async function runFortifyEnv(options: RunActionOptions = {}): Promise<Run
   const bootstrap: BootstrapResult = {
     fcliPath,
     version,
-    source: getLastDownloadedFcliPath() ? 'download' : 'preinstalled',
-    selfType: getLastDownloadedFcliPath() ? 'unstable' : 'stable'
+    source: getLastDownloadedFcliPath() ? 'download' : 'preinstalled'
   };
   
   // Run fcli tool env command
@@ -197,36 +189,23 @@ export async function runFortifyEnv(options: RunActionOptions = {}): Promise<Run
 
 /**
  * Get fcli path without bootstrapping (for env command)
- * Checks cached fcli, then configured/pre-installed fcli
+ * Checks configured/pre-installed fcli first, then cached fcli
  * 
  * @returns fcli path or null if not available
  */
 export function getFcliPathForEnv(): string | null {
-  // Try cached fcli first
-  let fcliPath = getLastDownloadedFcliPath();
-  
-  if (!fcliPath) {
-    // Try configured path
-    const config = getEffectiveConfig();
-    if (config.fcliPath) {
-      fcliPath = config.fcliPath;
-    }
+  // Try configured path first
+  const config = getEffectiveConfig();
+  if (config.fcliPath) {
+    return config.fcliPath;
   }
   
-  if (!fcliPath) {
-    // Check FCLI-specific environment variables
-    const fcliEnv = process.env.FCLI || process.env.FCLI_CMD || process.env.FCLI_HOME;
-    if (fcliEnv) {
-      const binaryName = os.platform() === 'win32' ? 'fcli.exe' : 'fcli';
-      const potentialPath = fs.existsSync(fcliEnv) && fs.statSync(fcliEnv).isDirectory()
-        ? path.join(fcliEnv, 'bin', binaryName)
-        : fcliEnv;
-        
-      if (fs.existsSync(potentialPath)) {
-        fcliPath = potentialPath;
-      }
-    }
+  // Check FCLI-specific environment variables
+  const envPath = getFcliPathFromEnv();
+  if (envPath) {
+    return envPath;
   }
   
-  return fcliPath;
+  // Try cached fcli last
+  return getLastDownloadedFcliPath();
 }

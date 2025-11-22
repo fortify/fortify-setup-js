@@ -192,6 +192,21 @@ EXAMPLES
 }
 
 /**
+ * Display current configuration
+ */
+function displayConfig(config: BootstrapConfig): void {
+  console.log('Current configuration:');
+  if (config.fcliPath) {
+    console.log(`  fcli-path: ${config.fcliPath}`);
+  } else {
+    console.log(`  fcli-url:            ${config.fcliUrl}`);
+    const rsaSha256Url = config.fcliRsaSha256Url || `${config.fcliUrl}.rsa_sha256`;
+    console.log(`  fcli-rsa-sha256-url: ${rsaSha256Url}`);
+    console.log(`  verify-signature:    ${config.verifySignature}`);
+  }
+}
+
+/**
  * Parse config options
  */
 function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>, reset: boolean, show: boolean } {
@@ -292,17 +307,7 @@ async function main(): Promise<void> {
       
       if (show) {
         const currentConfig = loadConfig();
-        console.log('Current configuration:\n');
-        if (currentConfig.fcliUrl) {
-          console.log(`  fcli-url: ${currentConfig.fcliUrl}`);
-        }
-        if (currentConfig.fcliRsaSha256Url) {
-          console.log(`  fcli-rsa-sha256-url: ${currentConfig.fcliRsaSha256Url}`);
-        }
-        console.log(`  verify-signature: ${currentConfig.verifySignature}`);
-        if (currentConfig.fcliPath) {
-          console.log(`  fcli-path: ${currentConfig.fcliPath}`);
-        }
+        displayConfig(currentConfig);
         console.log('\nNote: Environment variables (FCLI_URL, FCLI_PATH, etc.) override these settings.');
         process.exit(0);
       }
@@ -310,7 +315,9 @@ async function main(): Promise<void> {
       if (reset) {
         const { resetConfig } = await import('./config.js');
         resetConfig();
-        console.log('✓ Configuration reset to defaults');
+        console.log('✓ Configuration reset to defaults\n');
+        const currentConfig = loadConfig();
+        displayConfig(currentConfig);
         process.exit(0);
       }
       
@@ -323,17 +330,7 @@ async function main(): Promise<void> {
       saveConfig(newConfig);
       
       console.log('✓ Configuration saved\n');
-      console.log('Current settings:');
-      if (newConfig.fcliUrl) {
-        console.log(`  fcli-url: ${newConfig.fcliUrl}`);
-      }
-      if (newConfig.fcliRsaSha256Url) {
-        console.log(`  fcli-rsa-sha256-url: ${newConfig.fcliRsaSha256Url}`);
-      }
-      console.log(`  verify-signature: ${newConfig.verifySignature}`);
-      if (newConfig.fcliPath) {
-        console.log(`  fcli-path: ${newConfig.fcliPath}`);
-      }
+      displayConfig(newConfig);
       
       process.exit(0);
     }
