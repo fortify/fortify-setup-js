@@ -37,72 +37,108 @@ export interface RunActionResult {
 }
 
 /**
- * Run fortify-setup action programmatically
+ * Run fcli tool env command programmatically
  * 
- * This always re-downloads the latest fcli v3.x to ensure fresh binaries.
- * The downloaded fcli is saved to a temporary directory for use by runFortifyEnv().
+ * Handles both 'init' subcommand (for tool setup) and format subcommands
+ * (shell, github, etc.) for generating environment variables.
+ * 
+ * Automatically bootstraps fcli if not available in cache or via config.
  * 
  * @param options - Bootstrap and action options
  * @returns Promise with bootstrap and execution results
  * 
  * @example
  * ```typescript
- * import { runFortifySetup } from '@fortify/setup';
+ * import { runFortifyEnv } from '@fortify/setup';
  * 
- * // Install ScanCentral Client
- * await runFortifySetup({
- *   args: ['--tools=sc-client'],
+ * // Initialize tools
+ * await runFortifyEnv({
+ *   args: ['init', '--tools=sc-client'],
  *   verbose: true
  * });
  * 
- * // Install multiple tools
- * await runFortifySetup({
- *   args: ['--tools=fcli,sc-client']
+ * // Generate environment variables
+ * await runFortifyEnv({
+ *   args: ['shell']
  * });
  * ```
  */
-export async function runFortifySetup(options: RunActionOptions = {}): Promise<RunActionResult> {
+export async function runFortifyEnv(options: RunActionOptions = {}): Promise<RunActionResult> {
   const { args = [], verbose = false, ...bootstrapOptions } = options;
   
-  // Bootstrap fcli
-  if (verbose) {
-    console.log('Bootstrapping fcli...\n');
+  // Check if fcli is available, bootstrap if needed
+  let fcliPath = getFcliPathForEnv();
+  let bootstrap: BootstrapResult;
+  
+  if (!fcliPath) {
+    // Bootstrap fcli
+    if (verbose) {
+      console.log('Bootstrapping fcli...\n');
+    }
+    
+    bootstrap = await bootstrapFcli(bootstrapOptions);
+    fcliPath = bootstrap.fcliPath;
+    
+    if (verbose) {
+      console.log(`✓ Using fcli ${bootstrap.version} (source: ${bootstrap.source})\n`);
+    }
+  } else {
+    // Use existing fcli
+    const version = await getFcliVersion(fcliPath) || 'unknown';
+    bootstrap = {
+      fcliPath,
+      version,
+      source: getLastDownloadedFcliPath() ? 'cached' : 'preinstalled'
+    };
+    
+    if (verbose) {
+      console.log(`✓ Using fcli ${bootstrap.version} (source: ${bootstrap.source})\n`);
+    }
   }
   
-  const bootstrap = await bootstrapFcli(bootstrapOptions);
+  const subcommand = args[0] || '';
+  const isInit = subcommand === 'init';
   
-  if (verbose) {
-    console.log(`✓ Using fcli ${bootstrap.version} (source: ${bootstrap.source})\n`);
-    console.log('Running tool setup...\n');
+  // For init, add --self parameter and show progress
+  const cmdArgs = isInit 
+    ? `tool env init "--self=${fcliPath}" ${args.slice(1).join(' ')}`
+    : `tool env ${args.join(' ')}`;
+  
+  const cmd = `"${fcliPath}" ${cmdArgs}`;
+  
+  if (verbose && isInit) {
+    console.log('Running tool env init...\n');
   }
-  
-  // Run fcli tool setup command
-  const cmd = `"${bootstrap.fcliPath}" tool setup "--self=${bootstrap.fcliPath}" ${args.join(' ')}`;
   
   try {
-    execSync(cmd, { stdio: verbose ? 'inherit' : 'pipe' });
+    const output = execSync(cmd, { 
+      stdio: (verbose && isInit) ? 'inherit' : 'pipe',
+      encoding: 'utf-8' 
+    });
     return {
       bootstrap,
-      exitCode: 0
+      exitCode: 0,
+      output: (verbose && isInit) ? undefined : output
     };
   } catch (error: any) {
     if (verbose) {
-      showTroubleshootingMessage('Tool setup failed', bootstrap.source);
+      showTroubleshootingMessage('fcli tool env command failed', bootstrap.source);
     }
     
     // Show command output on failure
     if (error.stderr) {
       console.error('Error output from fcli command:');
-      console.error(error.stderr);
+      console.error(error.stderr.toString());
     }
-    if (error.stdout) {
+    if (error.stdout && !isInit) {
       console.error('Standard output from fcli command:');
-      console.error(error.stdout);
+      console.error(error.stdout.toString());
     }
     
     return {
       bootstrap,
-      exitCode: error.status || 1
+      exitCode: error.status || 1,
+      output: error.stdout ? error.stdout.toString() : undefined
     };
   }
 }
@@ -122,68 +158,58 @@ function showTroubleshootingMessage(context: string, source: string): void {
 }
 
 /**
- * Run fortify-env action programmatically
+ * Manage fcli cache
  * 
- * This uses the fcli from the temporary directory that was downloaded during the
- * last runFortifySetup() call. If no downloaded fcli is available, it falls back
- * to bootstrap (e.g., if pre-installed fcli is available).
- * 
- * @param options - Bootstrap and action options
- * @returns Promise with bootstrap results and environment output
- * 
- * @example
- * ```typescript
- * import { runFortifySetup, runFortifyEnv } from '@fortify/setup';
- * 
- * // First run setup to download fcli
- * await runFortifySetup({ args: ['--tools=sc-client'] });
- * 
- * // Then get environment variables
- * const result = await runFortifyEnv({
- *   args: ['shell']
- * });
- * console.log(result.output); // Environment variable definitions
- * 
- * // Get env for specific tools with versions
- * await runFortifyEnv({
- *   args: ['github', '--tools=sc-client:24.4.0']
- * });
- * ```
+ * @param action - Cache action: 'refresh', 'clear', or 'info'
  */
-export async function runFortifyEnv(options: RunActionOptions = {}): Promise<RunActionResult> {
-  const { args = [], verbose = false } = options;
+export async function manageFcliCache(action: string): Promise<void> {
+  const cachePath = getLastDownloadedFcliPath();
   
-  // Get fcli path without bootstrapping (uses cached or pre-installed)
-  const fcliPath = getFcliPathForEnv();
-  
-  if (!fcliPath) {
-    throw new Error('No fcli available. Run the \'run\' command first or configure a pre-installed fcli path.');
-  }
-  
-  // Get version for bootstrap result
-  const version = await getFcliVersion(fcliPath) || 'unknown';
-  const bootstrap: BootstrapResult = {
-    fcliPath,
-    version,
-    source: getLastDownloadedFcliPath() ? 'download' : 'preinstalled'
-  };
-  
-  // Run fcli tool env command
-  const cmd = `"${fcliPath}" tool env ${args.join(' ')}`;
-  
-  try {
-    const output = execSync(cmd, { encoding: 'utf-8' });
-    return {
-      bootstrap,
-      exitCode: 0,
-      output
-    };
-  } catch (error: any) {
-    return {
-      bootstrap,
-      exitCode: error.status || 1,
-      output: error.stdout || ''
-    };
+  switch (action) {
+    case 'refresh':
+      console.log('Refreshing cached fcli to latest version...\n');
+      // Clear cache first to force re-download
+      if (cachePath) {
+        const cacheDir = path.dirname(path.dirname(cachePath));
+        if (fs.existsSync(cacheDir)) {
+          fs.rmSync(cacheDir, { recursive: true, force: true });
+        }
+      }
+      const bootstrap = await bootstrapFcli();
+      console.log(`✓ Cached fcli refreshed to ${bootstrap.version}`);
+      console.log(`  Path: ${bootstrap.fcliPath}`);
+      break;
+      
+    case 'clear':
+      if (cachePath) {
+        const cacheDir = path.dirname(path.dirname(cachePath));
+        if (fs.existsSync(cacheDir)) {
+          fs.rmSync(cacheDir, { recursive: true, force: true });
+          console.log('✓ Cache cleared');
+        } else {
+          console.log('Cache is already empty');
+        }
+      } else {
+        console.log('No cached fcli found');
+      }
+      break;
+      
+    case 'info':
+      if (cachePath && fs.existsSync(cachePath)) {
+        const version = await getFcliVersion(cachePath);
+        console.log('Cached fcli information:');
+        console.log(`  Version: ${version || 'unknown'}`);
+        console.log(`  Path: ${cachePath}`);
+        const stats = fs.statSync(cachePath);
+        console.log(`  Last modified: ${stats.mtime.toISOString()}`);
+      } else {
+        console.log('No cached fcli found');
+        console.log('\nRun a command like \'npx @fortify/setup env init\' to create cache.');
+      }
+      break;
+      
+    default:
+      throw new Error(`Unknown cache action: ${action}. Valid actions: refresh, clear, info`);
   }
 }
 

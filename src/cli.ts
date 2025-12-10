@@ -6,7 +6,7 @@
  */
 
 import { execSync } from 'child_process';
-import { runFortifySetup, runFortifyEnv, getFcliPathForEnv } from './actions.js';
+import { runFortifyEnv, getFcliPathForEnv } from './actions.js';
 import { loadConfig, saveConfig, getDefaultConfig } from './config.js';
 import type { BootstrapConfig } from './types.js';
 
@@ -20,23 +20,22 @@ function showHelp(): void {
   console.log(`
 @fortify/setup
 
-NPM package that bootstraps a predefined fcli version and runs the fcli
-tool setup command to detect, register, and install Fortify tools for
-use in CI/CD workflows.
+NPM package that bootstraps fcli and provides a unified interface for
+Fortify tool environment management through the 'fcli tool env' command.
 
 USAGE
   npx @fortify/setup <command> [options]
 
 COMMANDS
   config        Configure fcli bootstrap settings
-  install       Install/setup Fortify tools
-  env           Generate environment variables for installed Fortify tools
+  env           Initialize tools and generate environment variables
+  cache         Manage cached fcli installation
 
 Run 'npx @fortify/setup <command> --help' for more information on a command.
 
 NOTE
-  The 'install' command always re-downloads to ensure latest fcli version is used.
-  The downloaded fcli is saved to an internal cache for use by the 'env' command.
+  The 'env' command uses cached fcli if available, otherwise bootstraps fresh.
+  Use 'env init' to set up tools, then 'env <format>' to generate environment vars.
 `);
 }
 
@@ -100,48 +99,31 @@ EXAMPLES
 }
 
 /**
- * Show install command help
+ * Show cache command help
  */
-function showInstallHelp(): void {
+function showCacheHelp(): void {
   console.log(`
-Install/setup Fortify tools
+Manage cached fcli installation
 
-Bootstrapping downloads a predefined fcli version that's then used to run
-the fcli tool setup command.
+The cache stores a downloaded fcli for reuse by the 'env' command.
 
 USAGE
-  npx @fortify/setup install [options]
+  npx @fortify/setup cache <action>
 
-All options are passed through to the tool setup command.
-
-OPTIONS
-  --help|-h                   Show this help information
-  --fcli-help                 Show fcli tool setup help
-
-BOOTSTRAP BEHAVIOR
-  Bootstrap searches for fcli in the following order:
-  1. Configured path (via config file or FCLI_PATH env var). Must be 3.14.0+
-  2. FCLI-specific environment variables (FCLI, FCLI_CMD, FCLI_HOME)
-  3. Download latest v3.x (always re-downloads to ensure latest version is used)
-  
-  NOTE: Step 3 always re-downloads to ensure latest fcli version is used. The
-  downloaded fcli is saved to an internal cache for use by the 'env' command.
+ACTIONS
+  refresh       Refresh cached fcli to latest version
+  clear         Remove cached fcli
+  info          Show cached fcli information
 
 EXAMPLES
-  # Install ScanCentral Client
-  npx @fortify/setup install --tools=sc-client
+  # Refresh to latest fcli
+  npx @fortify/setup cache refresh
   
-  # Install multiple tools
-  npx @fortify/setup install --tools=fcli,sc-client
+  # Clear cache
+  npx @fortify/setup cache clear
   
-  # Use CI/CD tool cache
-  npx @fortify/setup install --tools=sc-client --tool-cache-pattern=/tmp/cache/{tool}/{version}
-  
-  # Air-gapped mode (pre-installed tools only)
-  npx @fortify/setup install --tools=sc-client --air-gapped
-  
-  # Show fcli tool setup help
-  npx @fortify/setup install --fcli-help
+  # Show cache info
+  npx @fortify/setup cache info
 `);
 }
 
@@ -150,44 +132,47 @@ EXAMPLES
  */
 function showEnvHelp(): void {
   console.log(`
-Generate environment variables for installed Fortify tools
+Initialize tools and generate environment variables
 
-Outputs environment variable definitions for installed Fortify tools in various
-formats suitable for sourcing in shells or setting through CI/CD systems.
+Provides a unified interface to both 'fcli tool env init' (for tool setup)
+and 'fcli tool env <format>' (for generating environment variables).
 
 USAGE
-  npx @fortify/setup env <type> [options]
+  npx @fortify/setup env <subcommand> [options]
 
-The <type> parameter specifies the output format (e.g., shell, github, ado, gitlab).
+SUBCOMMANDS
+  init          Initialize/install Fortify tools (fcli tool env init)
+  shell         Generate shell environment variables
+  github        Generate GitHub Actions environment
+  ado           Generate Azure DevOps environment
+  gitlab        Generate GitLab CI environment
+  powershell    Generate PowerShell environment
+  expr          Evaluate custom template expressions
 
 OPTIONS
   --help|-h                   Show this help information
-  --fcli-help                 Show fcli tool env help (fortify-setup env --fcli-help shows
-                             information on available types, fortify-setup env <type> --fcli-help
-                             shows help for that specific type)
+  --fcli-help                 Show fcli tool env help
 
-PREREQUISITE
-  The 'env' command does NOT bootstrap or download fcli. It requires one of:
-  1. The 'install' command has been executed (uses cached fcli from last run)
-  2. Pre-installed fcli configured via 'config --fcli-path' or env vars
-
-  If neither is available, the command will fail with an error.
+BOOTSTRAP BEHAVIOR
+  The env command uses cached fcli if present, otherwise bootstraps automatically.
+  Cached fcli is created by previous env commands or can be pre-populated.
 
 EXAMPLES
-  # Generate env for all installed tools (shell format)
+  # Initialize tools
+  npx @fortify/setup env init --tools=sc-client
+  
+  # Generate shell environment
   npx @fortify/setup env shell
   
-  # Generate env for specific tools with versions
-  npx @fortify/setup env shell --tools=sc-client:24.4.0
-  
-  # Generate env for GitHub Actions
-  npx @fortify/setup env github
+  # Initialize and generate in one workflow
+  npx @fortify/setup env init --tools=fcli,sc-client
+  npx @fortify/setup env shell
   
   # Use in shell (bash/zsh)
   source <(npx @fortify/setup env shell)
   
   # Show fcli tool env help
-  npx @fortify/setup env shell --fcli-help
+  npx @fortify/setup env --fcli-help
 `);
 }
 
@@ -273,7 +258,7 @@ function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>,
 async function main(): Promise<void> {
   try {
     // Valid subcommands
-    const validCommands = ['config', 'install', 'env'];
+    const validCommands = ['config', 'env', 'cache'];
     
     // Check for help at root level (no command or command is help flag)
     if (!command || command === '--help' || command === '-h' || command === 'help') {
@@ -335,51 +320,49 @@ async function main(): Promise<void> {
       process.exit(0);
     }
     
-    // Install/setup Fortify tools
-    if (command === 'install') {
+    // Manage cache
+    if (command === 'cache') {
       const actionArgs = args.slice(1);
+      const action = actionArgs[0];
       
-      // Show npm-specific help only (no bootstrap required, check anywhere in args)
-      if (actionArgs.length === 0 || actionArgs.includes('--help') || actionArgs.includes('-h')) {
-        showInstallHelp();
+      // Show help if no action or help flag
+      if (!action || action === '--help' || action === '-h') {
+        showCacheHelp();
         process.exit(0);
       }
       
-      // Run action
-      const result = await runFortifySetup({
-        args: actionArgs,
-        verbose: true
-      });
-      
-      process.exit(result.exitCode);
+      const { manageFcliCache } = await import('./actions.js');
+      await manageFcliCache(action);
+      process.exit(0);
     }
     
-    // Run fortify-env action
+    // Run env command (handles both init and format subcommands)
     if (command === 'env') {
       const actionArgs = args.slice(1);
       
-      // Show npm-specific help only (no bootstrap required, check anywhere in args)
-      if (actionArgs.includes('--help') || actionArgs.includes('-h')) {
+      // Show help if no args or help flag
+      if (actionArgs.length === 0 || actionArgs.includes('--help') || actionArgs.includes('-h')) {
         showEnvHelp();
         process.exit(0);
       }
       
-      // Run action (no bootstrap, use cached or configured fcli)
+      // Run action (bootstraps if needed)
       const result = await runFortifyEnv({
-        args: actionArgs
+        args: actionArgs,
+        verbose: actionArgs[0] === 'init'
       });
       
       if (result.exitCode !== 0) {
-        console.error(`\n❌ Error: tool env command failed with exit code ${result.exitCode}\n`);
+        console.error(`\n❌ Error: fcli tool env command failed with exit code ${result.exitCode}\n`);
         console.error('Troubleshooting suggestions:');
-        console.error('  • Verify your type and options are correct');
+        console.error('  • Verify your subcommand and options are correct');
         if (result.bootstrap.source === 'configured' || result.bootstrap.source === 'preinstalled') {
           console.error('  • Your custom fcli may be too old or incompatible (requires fcli 3.14.0 or later)');
-          console.error('  • Try using the default version: fortify-setup config --reset');
+          console.error('  • Try using the default version: npx @fortify/setup config --reset');
         }
         console.error('');
-      } else {
-        // Print the environment variable output
+      } else if (result.output) {
+        // Print the output (for format subcommands, not for init)
         console.log(result.output);
       }
       

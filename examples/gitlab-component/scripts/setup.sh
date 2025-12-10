@@ -2,7 +2,7 @@
 
 #
 # Fortify Setup Script for GitLab CI
-# This script installs Fortify tools using @fortify/setup CLI
+# This script installs Fortify tools using @fortify/setup env init
 #
 
 set -e  # Exit on error
@@ -26,50 +26,48 @@ DEBRICKED_CLI_VERSION=${DEBRICKED_CLI_VERSION:-}
 EXPORT_PATH=${EXPORT_PATH:-true}
 USE_TOOL_CACHE=${USE_TOOL_CACHE:-false}
 
-# Build command arguments
-ARGS=""
-
-if [ -n "$SC_CLIENT_VERSION" ]; then
-  ARGS="$ARGS --sc-client=$SC_CLIENT_VERSION"
-  echo "  • ScanCentral Client: $SC_CLIENT_VERSION"
-fi
+# Build tools list
+TOOLS=""
 
 if [ -n "$FCLI_VERSION" ]; then
-  ARGS="$ARGS --fcli=$FCLI_VERSION"
+  TOOLS="fcli:$FCLI_VERSION"
   echo "  • fcli: $FCLI_VERSION"
 fi
 
+if [ -n "$SC_CLIENT_VERSION" ]; then
+  [ -n "$TOOLS" ] && TOOLS="$TOOLS,"
+  TOOLS="${TOOLS}sc-client:$SC_CLIENT_VERSION"
+  echo "  • ScanCentral Client: $SC_CLIENT_VERSION"
+fi
+
 if [ -n "$FOD_UPLOADER_VERSION" ]; then
-  ARGS="$ARGS --fod-uploader=$FOD_UPLOADER_VERSION"
+  [ -n "$TOOLS" ] && TOOLS="$TOOLS,"
+  TOOLS="${TOOLS}fod-uploader:$FOD_UPLOADER_VERSION"
   echo "  • FoD Uploader: $FOD_UPLOADER_VERSION"
 fi
 
 if [ -n "$DEBRICKED_CLI_VERSION" ]; then
-  ARGS="$ARGS --debricked-cli=$DEBRICKED_CLI_VERSION"
+  [ -n "$TOOLS" ] && TOOLS="$TOOLS,"
+  TOOLS="${TOOLS}debricked-cli:$DEBRICKED_CLI_VERSION"
   echo "  • Debricked CLI: $DEBRICKED_CLI_VERSION"
 fi
 
-if [ "$EXPORT_PATH" = "true" ]; then
-  ARGS="$ARGS --export-path"
-  echo "  • Export to PATH: enabled"
-fi
-
-if [ "$USE_TOOL_CACHE" = "true" ]; then
-  ARGS="$ARGS --use-tool-cache"
-  echo "  • Tool cache: enabled"
-fi
-
 echo ""
-echo "Running fortify-setup..."
+echo "Running fortify-setup env init..."
 
-# Run fortify-setup
-fortify-setup run $ARGS
+# Run fortify-setup env init
+if [ -n "$TOOLS" ]; then
+  @fortify/setup env init --tools "$TOOLS"
+else
+  echo "No tools specified"
+  exit 1
+fi
 
 echo ""
 echo "Generating environment variables..."
 
 # Generate and source environment variables
-eval "$(fortify-setup env)"
+eval "$(@fortify/setup env shell)"
 
 echo ""
 echo "================================================"

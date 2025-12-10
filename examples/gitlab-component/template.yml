@@ -32,42 +32,43 @@ fortify-setup:
       
       echo "Setting up Fortify tools..."
       
-      # Build arguments array
-      ARGS=""
-      
-      if [ -n "$[[ inputs.sc-client ]]" ]; then
-        ARGS="$ARGS --sc-client=$[[ inputs.sc-client ]]"
-      fi
+      # Build tools list
+      TOOLS=""
       
       if [ -n "$[[ inputs.fcli ]]" ]; then
-        ARGS="$ARGS --fcli=$[[ inputs.fcli ]]"
+        TOOLS="fcli:$[[ inputs.fcli ]]"
+      fi
+      
+      if [ -n "$[[ inputs.sc-client ]]" ]; then
+        [ -n "$TOOLS" ] && TOOLS="$TOOLS,"
+        TOOLS="${TOOLS}sc-client:$[[ inputs.sc-client ]]"
       fi
       
       if [ -n "$[[ inputs.fod-uploader ]]" ]; then
-        ARGS="$ARGS --fod-uploader=$[[ inputs.fod-uploader ]]"
+        [ -n "$TOOLS" ] && TOOLS="$TOOLS,"
+        TOOLS="${TOOLS}fod-uploader:$[[ inputs.fod-uploader ]]"
       fi
       
       if [ -n "$[[ inputs.debricked-cli ]]" ]; then
-        ARGS="$ARGS --debricked-cli=$[[ inputs.debricked-cli ]]"
-      fi
-      
-      if [ "$[[ inputs.export-path ]]" = "true" ]; then
-        ARGS="$ARGS --export-path"
-      fi
-      
-      if [ "$[[ inputs.use-tool-cache ]]" = "true" ]; then
-        ARGS="$ARGS --use-tool-cache"
+        [ -n "$TOOLS" ] && TOOLS="$TOOLS,"
+        TOOLS="${TOOLS}debricked-cli:$[[ inputs.debricked-cli ]]"
       fi
       
       # Disable fcli caching in CI
       export FCLI_CACHE_ENABLED=false
       
-      # Run fortify-setup
-      fortify-setup run $ARGS
+      # Run fortify-setup env init
+      if [ -n "$TOOLS" ]; then
+        @fortify/setup env init --tools "$TOOLS"
+      fi
       
       # Generate environment variables for downstream jobs
       echo "Generating environment variables..."
-      fortify-setup env > fortify-tools.env
+      EXCLUDE_ARGS=""
+      if [ "$[[ inputs.export-path ]]" != "true" ]; then
+        EXCLUDE_ARGS="--exclude=path"
+      fi
+      @fortify/setup env gitlab $EXCLUDE_ARGS --file fortify-tools.env
       
       echo "✓ Fortify tools setup complete"
   
