@@ -101,8 +101,8 @@ export async function runFortifyEnv(options: RunActionOptions = {}): Promise<Run
   
   // For init, add --self parameter and show progress
   const cmdArgs = isInit 
-    ? `tool env init "--self=${fcliPath}" ${args.slice(1).join(' ')}`
-    : `tool env ${args.join(' ')}`;
+    ? `-Xwrapped tool env init "--self=${fcliPath}" ${args.slice(1).join(' ')}`
+    : `-Xwrapped tool env ${args.join(' ')}`;
   
   const cmd = `"${fcliPath}" ${cmdArgs}`;
   
