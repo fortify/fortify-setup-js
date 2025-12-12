@@ -79,7 +79,4 @@ export interface DownloadMetadata {
   
   /** Download timestamp */
   downloadedAt: string;
-  
-  /** Configuration hash (to detect config changes) */
-  configHash: string;
 }

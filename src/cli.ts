@@ -6,6 +6,9 @@
  */
 
 import { execSync } from 'child_process';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { runFortifyEnv, getFcliPathForEnv } from './actions.js';
 import { loadConfig, saveConfig, getDefaultConfig } from './config.js';
 import type { BootstrapConfig } from './types.js';
@@ -306,10 +309,19 @@ async function main(): Promise<void> {
         process.exit(0);
       }
       
-      // If any configuration options were provided, start fresh with defaults
-      // then apply only the specified updates. This prevents mismatches like
-      // old signature URLs being used with new fcli URLs.
+      // If any configuration options were provided, clear bootstrap cache to force re-download
       const hasConfigUpdates = Object.keys(updates).length > 0;
+      if (hasConfigUpdates) {
+        const { resetConfig: clearCache } = await import('./config.js');
+        // Clear bootstrap cache but don't reset config file yet
+        const bootstrapDir = path.join(os.homedir(), '.fortify', 'fcli', 'bootstrap');
+        if (fs.existsSync(bootstrapDir)) {
+          fs.rmSync(bootstrapDir, { recursive: true, force: true });
+        }
+      }
+      
+      // Start fresh with defaults then apply only the specified updates
+      // This prevents mismatches like old signature URLs being used with new fcli URLs
       const newConfig = hasConfigUpdates ? { ...getDefaultConfig(), ...updates } : loadConfig();
       
       saveConfig(newConfig);

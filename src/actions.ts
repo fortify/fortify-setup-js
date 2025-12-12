@@ -80,19 +80,20 @@ export async function runFortifyEnv(options: RunActionOptions = {}): Promise<Run
     fcliPath = bootstrap.fcliPath;
     
     if (verbose) {
-      console.log(`✓ Using fcli ${bootstrap.version} (source: ${bootstrap.source})\n`);
+      console.log(`✓ Using fcli ${bootstrap.version} (source: ${bootstrap.source}, location: ${fcliPath})\n`);
     }
   } else {
     // Use existing fcli
     const version = await getFcliVersion(fcliPath) || 'unknown';
+    const source = getLastDownloadedFcliPath() ? 'cached' : 'preinstalled';
     bootstrap = {
       fcliPath,
       version,
-      source: getLastDownloadedFcliPath() ? 'cached' : 'preinstalled'
+      source
     };
     
     if (verbose) {
-      console.log(`✓ Using fcli ${bootstrap.version} (source: ${bootstrap.source})\n`);
+      console.log(`✓ Using fcli ${bootstrap.version} (source: ${source}, location: ${fcliPath})\n`);
     }
   }
   

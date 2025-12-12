@@ -5,7 +5,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import * as crypto from 'crypto';
 import type { BootstrapConfig, BootstrapOptions } from './types.js';
 
 const CONFIG_DIR = path.join(os.homedir(), '.config', 'fortify', 'setup');
@@ -76,11 +75,17 @@ export function saveConfig(config: BootstrapConfig): void {
 }
 
 /**
- * Reset configuration to defaults (delete config file)
+ * Reset configuration to defaults (delete config file and clear bootstrap cache)
  */
 export function resetConfig(): void {
   if (fs.existsSync(CONFIG_FILE)) {
     fs.unlinkSync(CONFIG_FILE);
+  }
+  
+  // Clear bootstrap cache to force re-download with new config
+  const bootstrapDir = getTempDir();
+  if (fs.existsSync(bootstrapDir)) {
+    fs.rmSync(bootstrapDir, { recursive: true, force: true });
   }
 }
 
@@ -121,27 +126,17 @@ export function getEffectiveConfig(options: BootstrapOptions = {}): BootstrapCon
 }
 
 /**
- * Generate configuration hash (to detect config changes)
+ * Get bootstrap directory for downloaded fcli (fixed location in user's home)
  */
-export function getConfigHash(config: BootstrapConfig): string {
-  const relevant = {
-    fcliVersion: FCLI_VERSION,
-    fcliUrl: config.fcliUrl,
-    verifySignature: config.verifySignature
-  };
-  return crypto.createHash('sha256').update(JSON.stringify(relevant)).digest('hex').slice(0, 16);
+export function getTempDir(): string {
+  return path.join(os.homedir(), '.fortify', 'fcli', 'bootstrap');
 }
 
 /**
- * Get temporary directory for downloaded fcli (used by env command)
+ * Get full path to bootstrapped fcli binary
  */
-export function getTempDir(): string {
-  const platform = os.platform();
-  if (platform === 'win32') {
-    return path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'fortify', 'fcli-temp');
-  } else {
-    return path.join(os.tmpdir(), 'fortify', 'fcli');
-  }
+export function getBootstrapBinPath(): string {
+  return path.join(getTempDir(), 'bin', os.platform() === 'win32' ? 'fcli.exe' : 'fcli');
 }
 
 

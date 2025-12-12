@@ -15,7 +15,7 @@ import { Readable } from 'stream';
 import * as tar from 'tar';
 import * as unzipper from 'unzipper';
 import type { BootstrapConfig, BootstrapResult, BootstrapOptions, DownloadMetadata } from './types.js';
-import { getEffectiveConfig, getTempDir, getConfigHash, getFcliVersion as getFcliVersionConstant, getDefaultConfig } from './config.js';
+import { getEffectiveConfig, getTempDir, getFcliVersion as getFcliVersionConstant, getDefaultConfig, getBootstrapBinPath } from './config.js';
 
 const execAsync = promisify(exec);
 
@@ -188,22 +188,23 @@ async function downloadAndInstallFcli(config: BootstrapConfig): Promise<string> 
   const defaultConfig = getDefaultConfig();
   const downloadUrl = config.fcliUrl || defaultConfig.fcliUrl!;
   const archiveName = getFcliArchiveName();
-  const tempDir = getTempDir();
-  const configHash = getConfigHash(config);
+  const bootstrapDir = getTempDir();
   
-  // Temp directory structure: {tempDir}/{configHash}/
-  const versionTempDir = path.join(tempDir, configHash);
-  const archivePath = path.join(versionTempDir, archiveName);
-  const extractDir = path.join(versionTempDir, 'bin');
+  // Bootstrap directory structure: <home>/.fortify/fcli/bootstrap/
+  const archivePath = path.join(bootstrapDir, archiveName);
+  const extractDir = path.join(bootstrapDir, 'bin');
   const fcliPath = path.join(extractDir, getFcliBinaryName());
-  const metadataPath = path.join(versionTempDir, 'metadata.json');
+  const metadataPath = path.join(bootstrapDir, 'metadata.json');
   
-  // Always download fresh copy to ensure latest version within v3.x
-  // Remove any existing temp copy
-  if (fs.existsSync(versionTempDir)) {
-    fs.rmSync(versionTempDir, { recursive: true, force: true });
+  // Return existing fcli if already downloaded
+  if (fs.existsSync(fcliPath)) {
+    return fcliPath;
   }
-  fs.mkdirSync(versionTempDir, { recursive: true });
+  
+  // Ensure bootstrap directory exists
+  if (!fs.existsSync(bootstrapDir)) {
+    fs.mkdirSync(bootstrapDir, { recursive: true });
+  }
   
   // Download
   console.log(`Downloading fcli from ${downloadUrl}...`);
@@ -258,28 +259,25 @@ async function downloadAndInstallFcli(config: BootstrapConfig): Promise<string> 
   const metadata: DownloadMetadata = {
     url: downloadUrl,
     version: fcliVersion,
-    downloadedAt: new Date().toISOString(),
-    configHash
+    downloadedAt: new Date().toISOString()
   };
   fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
   
   // Clean up archive
   fs.unlinkSync(archivePath);
   
+  console.log(`✓ Fcli bootstrapped to: ${bootstrapDir}`);
+  
   return fcliPath;
 }
 
 /**
  * Get last downloaded fcli path (for env command after run has been executed)
- * This retrieves the fcli from the temp directory that was downloaded during the last run command.
+ * This retrieves the fcli from the bootstrap directory.
  */
 export function getLastDownloadedFcliPath(config?: BootstrapConfig): string | null {
-  const effectiveConfig = config || getEffectiveConfig();
-  const tempDir = getTempDir();
-  const configHash = getConfigHash(effectiveConfig);
-  const versionTempDir = path.join(tempDir, configHash);
-  const extractDir = path.join(versionTempDir, 'bin');
-  const fcliPath = path.join(extractDir, getFcliBinaryName());
+  const bootstrapDir = getTempDir();
+  const fcliPath = path.join(bootstrapDir, 'bin', getFcliBinaryName());
   
   return fs.existsSync(fcliPath) ? fcliPath : null;
 }
