@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.17](https://github.com/fortify/fortify-setup-js/compare/v0.0.16...v0.0.17) (2025-12-12)
+
+
+### Bug Fixes
+
+* Simplify fcli bootstrap location ([320f940](https://github.com/fortify/fortify-setup-js/commit/320f940c17ded48a066ce8c04e969da946549a94))
+
 ## [0.0.16](https://github.com/fortify/fortify-setup-js/compare/v0.0.15...v0.0.16) (2025-12-10)
 
 
