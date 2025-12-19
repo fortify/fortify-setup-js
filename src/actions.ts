@@ -7,6 +7,9 @@ import { execSync } from 'child_process';
 import { bootstrapFcli, getLastDownloadedFcliPath, getFcliVersion, getFcliPathFromEnv } from './bootstrap.js';
 import { getEffectiveConfig } from './config.js';
 import type { BootstrapOptions, BootstrapResult } from './types.js';
+import { BootstrapSource } from './types.js';
+import { createLogger } from './logger.js';
+import { formatError } from './utils.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -65,6 +68,7 @@ export interface RunActionResult {
  */
 export async function runFortifyEnv(options: RunActionOptions = {}): Promise<RunActionResult> {
   const { args = [], verbose = false, ...bootstrapOptions } = options;
+  const logger = createLogger(verbose);
   
   // Check if fcli is available, bootstrap if needed
   let fcliPath = getFcliPathForEnv();
@@ -72,29 +76,23 @@ export async function runFortifyEnv(options: RunActionOptions = {}): Promise<Run
   
   if (!fcliPath) {
     // Bootstrap fcli
-    if (verbose) {
-      console.log('Bootstrapping fcli...\n');
-    }
+    logger.verbose('Bootstrapping fcli...\n');
     
     bootstrap = await bootstrapFcli(bootstrapOptions);
     fcliPath = bootstrap.fcliPath;
     
-    if (verbose) {
-      console.log(`✓ Using fcli ${bootstrap.version} (source: ${bootstrap.source}, location: ${fcliPath})\n`);
-    }
+    logger.verbose(`✓ Using fcli ${bootstrap.version} (source: ${bootstrap.source}, location: ${fcliPath})\n`);
   } else {
     // Use existing fcli
     const version = await getFcliVersion(fcliPath) || 'unknown';
-    const source = getLastDownloadedFcliPath() ? 'cached' : 'preinstalled';
+    const source = getLastDownloadedFcliPath() ? BootstrapSource.CACHED : BootstrapSource.PREINSTALLED;
     bootstrap = {
       fcliPath,
       version,
       source
     };
     
-    if (verbose) {
-      console.log(`✓ Using fcli ${bootstrap.version} (source: ${source}, location: ${fcliPath})\n`);
-    }
+    logger.verbose(`✓ Using fcli ${bootstrap.version} (source: ${source}, location: ${fcliPath})\n`);
   }
   
   const subcommand = args[0] || '';
@@ -107,39 +105,39 @@ export async function runFortifyEnv(options: RunActionOptions = {}): Promise<Run
   
   const cmd = `"${fcliPath}" ${cmdArgs}`;
   
-  if (verbose && isInit) {
-    console.log('Running tool env init...\n');
-  }
+  logger.verbose(isInit ? 'Running tool env init...\n' : '');
   
   try {
     const output = execSync(cmd, { 
       stdio: (verbose && isInit) ? 'inherit' : 'pipe',
-      encoding: 'utf-8' 
+      encoding: 'utf-8',
+      timeout: 300000 // 5 minutes
     });
     return {
       bootstrap,
       exitCode: 0,
       output: (verbose && isInit) ? undefined : output
     };
-  } catch (error: any) {
+  } catch (error) {
     if (verbose) {
-      showTroubleshootingMessage('fcli tool env command failed', bootstrap.source);
+      showTroubleshootingMessage('fcli tool env command failed', bootstrap.source, logger);
     }
     
     // Show command output on failure
-    if (error.stderr) {
-      console.error('Error output from fcli command:');
-      console.error(error.stderr.toString());
+    const err = error as { stderr?: Buffer; stdout?: Buffer; status?: number };
+    if (err.stderr) {
+      logger.error('Error output from fcli command:');
+      logger.error(err.stderr.toString());
     }
-    if (error.stdout && !isInit) {
-      console.error('Standard output from fcli command:');
-      console.error(error.stdout.toString());
+    if (err.stdout && !isInit) {
+      logger.error('Standard output from fcli command:');
+      logger.error(err.stdout.toString());
     }
     
     return {
       bootstrap,
-      exitCode: error.status || 1,
-      output: error.stdout ? error.stdout.toString() : undefined
+      exitCode: err.status || 1,
+      output: err.stdout ? err.stdout.toString() : undefined
     };
   }
 }
@@ -147,15 +145,15 @@ export async function runFortifyEnv(options: RunActionOptions = {}): Promise<Run
 /**
  * Display troubleshooting message for fcli command failures
  */
-function showTroubleshootingMessage(context: string, source: string): void {
-  console.error(`\n❌ ${context}\n`);
-  console.error('Troubleshooting suggestions:');
-  console.error('  • Verify your options are correct');
-  if (source === 'configured' || source === 'preinstalled') {
-    console.error('  • Your custom fcli may be too old or incompatible (requires fcli 3.14.0 or later)');
-    console.error('  • Try using the default version: fortify-setup config --reset');
+function showTroubleshootingMessage(context: string, source: BootstrapSource, logger: ReturnType<typeof createLogger>): void {
+  logger.error(`\n❌ ${context}\n`);
+  logger.error('Troubleshooting suggestions:');
+  logger.error('  • Verify your options are correct');
+  if (source === BootstrapSource.CONFIGURED || source === BootstrapSource.PREINSTALLED) {
+    logger.error('  • Your custom fcli may be too old or incompatible (requires fcli 3.14.0 or later)');
+    logger.error('  • Try using the default version: fortify-setup config --reset');
   }
-  console.error('');
+  logger.error('');
 }
 
 /**
@@ -163,12 +161,12 @@ function showTroubleshootingMessage(context: string, source: string): void {
  * 
  * @param action - Cache action: 'refresh', 'clear', or 'info'
  */
-export async function manageFcliCache(action: string): Promise<void> {
+export async function manageFcliCache(action: string, logger = createLogger(false)): Promise<void> {
   const cachePath = getLastDownloadedFcliPath();
   
   switch (action) {
     case 'refresh':
-      console.log('Refreshing cached fcli to latest version...\n');
+      logger.info('Refreshing cached fcli to latest version...\n');
       // Clear cache first to force re-download
       if (cachePath) {
         const cacheDir = path.dirname(path.dirname(cachePath));
@@ -177,8 +175,8 @@ export async function manageFcliCache(action: string): Promise<void> {
         }
       }
       const bootstrap = await bootstrapFcli();
-      console.log(`✓ Cached fcli refreshed to ${bootstrap.version}`);
-      console.log(`  Path: ${bootstrap.fcliPath}`);
+      logger.info(`✓ Cached fcli refreshed to ${bootstrap.version}`);
+      logger.info(`  Path: ${bootstrap.fcliPath}`);
       break;
       
     case 'clear':
@@ -186,26 +184,26 @@ export async function manageFcliCache(action: string): Promise<void> {
         const cacheDir = path.dirname(path.dirname(cachePath));
         if (fs.existsSync(cacheDir)) {
           fs.rmSync(cacheDir, { recursive: true, force: true });
-          console.log('✓ Cache cleared');
+          logger.info('✓ Cache cleared');
         } else {
-          console.log('Cache is already empty');
+          logger.info('Cache is already empty');
         }
       } else {
-        console.log('No cached fcli found');
+        logger.info('No cached fcli found');
       }
       break;
       
     case 'info':
       if (cachePath && fs.existsSync(cachePath)) {
         const version = await getFcliVersion(cachePath);
-        console.log('Cached fcli information:');
-        console.log(`  Version: ${version || 'unknown'}`);
-        console.log(`  Path: ${cachePath}`);
+        logger.info('Cached fcli information:');
+        logger.info(`  Version: ${version || 'unknown'}`);
+        logger.info(`  Path: ${cachePath}`);
         const stats = fs.statSync(cachePath);
-        console.log(`  Last modified: ${stats.mtime.toISOString()}`);
+        logger.info(`  Last modified: ${stats.mtime.toISOString()}`);
       } else {
-        console.log('No cached fcli found');
-        console.log('\nRun a command like \'npx @fortify/setup env init\' to create cache.');
+        logger.info('No cached fcli found');
+        logger.info('\nRun a command like \'npx @fortify/setup env init\' to create cache.');
       }
       break;
       

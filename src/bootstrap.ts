@@ -15,7 +15,10 @@ import { Readable } from 'stream';
 import * as tar from 'tar';
 import * as unzipper from 'unzipper';
 import type { BootstrapConfig, BootstrapResult, BootstrapOptions, DownloadMetadata } from './types.js';
+import { BootstrapSource } from './types.js';
 import { getEffectiveConfig, getTempDir, getFcliVersion as getFcliVersionConstant, getDefaultConfig, getBootstrapBinPath } from './config.js';
+import { createLogger, defaultLogger } from './logger.js';
+import { formatError } from './utils.js';
 
 const execAsync = promisify(exec);
 
@@ -207,12 +210,12 @@ async function downloadAndInstallFcli(config: BootstrapConfig): Promise<string> 
   }
   
   // Download
-  console.log(`Downloading fcli from ${downloadUrl}...`);
+  defaultLogger.info(`Downloading fcli from ${downloadUrl}...`);
   
   try {
     await downloadFile(downloadUrl, archivePath);
-  } catch (error: any) {
-    throw new Error(`Failed to download fcli from ${downloadUrl}: ${error.message}`);
+  } catch (error) {
+    throw new Error(`Failed to download fcli from ${downloadUrl}: ${formatError(error)}`);
   }
   
   if (!fs.existsSync(archivePath)) {
@@ -224,30 +227,26 @@ async function downloadAndInstallFcli(config: BootstrapConfig): Promise<string> 
     const fcliRsaSha256Url = config.fcliRsaSha256Url || `${downloadUrl}.rsa_sha256`;
     const signaturePath = `${archivePath}.rsa_sha256`;
     
-    console.log(`Verifying signature from ${fcliRsaSha256Url}...`);
+    defaultLogger.info(`Verifying signature from ${fcliRsaSha256Url}...`);
     
     try {
       await downloadFile(fcliRsaSha256Url, signaturePath);
-    } catch (error: any) {
+    } catch (error) {
       fs.unlinkSync(archivePath);
-      throw new Error(`Failed to download signature from ${fcliRsaSha256Url}: ${error.message}\nIf you trust the source, you can disable verification with: config --no-verify-signature`);
+      throw new Error(`Failed to download signature from ${fcliRsaSha256Url}: ${formatError(error)}\nIf you trust the source, you can disable verification with: config --no-verify-signature`);
     }
     
     try {
       await verifySignature(archivePath, signaturePath);
-      console.log('✓ Signature verification successful');
-    } catch (error: any) {
+      defaultLogger.info('✓ Signature verification successful');
+    } catch (error) {
       fs.unlinkSync(archivePath);
-      // Avoid redundant "Signature verification failed: Signature verification failed"
-      const errorMsg = error.message.toLowerCase().includes('signature verification failed') 
-        ? error.message 
-        : `Signature verification failed: ${error.message}`;
-      throw new Error(`${errorMsg}\nIf you trust the source, you can disable verification with: config --no-verify-signature`);
+      throw new Error(`Signature verification failed: ${formatError(error)}\nIf you trust the source, you can disable verification with: config --no-verify-signature`);
     }
   }
   
   // Extract
-  console.log('Extracting fcli...');
+  defaultLogger.info('Extracting fcli...');
   await extractArchive(archivePath, extractDir);
   
   // Make executable (Linux/Mac)
@@ -266,7 +265,7 @@ async function downloadAndInstallFcli(config: BootstrapConfig): Promise<string> 
   // Clean up archive
   fs.unlinkSync(archivePath);
   
-  console.log(`✓ Fcli bootstrapped to: ${bootstrapDir}`);
+  defaultLogger.info(`✓ Fcli bootstrapped to: ${bootstrapDir}`);
   
   return fcliPath;
 }
@@ -302,7 +301,7 @@ export async function bootstrapFcli(options: BootstrapOptions = {}): Promise<Boo
     return {
       fcliPath: config.fcliPath,
       version,
-      source: 'configured'
+      source: BootstrapSource.CONFIGURED
     };
   }
   
@@ -313,7 +312,7 @@ export async function bootstrapFcli(options: BootstrapOptions = {}): Promise<Boo
     return {
       fcliPath: envFcliPath,
       version,
-      source: 'preinstalled'
+      source: BootstrapSource.PREINSTALLED
     };
   }
   
@@ -324,6 +323,6 @@ export async function bootstrapFcli(options: BootstrapOptions = {}): Promise<Boo
   return {
     fcliPath,
     version,
-    source: 'download'
+    source: BootstrapSource.DOWNLOAD
   };
 }

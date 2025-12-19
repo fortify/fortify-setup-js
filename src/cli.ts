@@ -12,6 +12,9 @@ import * as path from 'path';
 import { runFortifyEnv, getFcliPathForEnv } from './actions.js';
 import { loadConfig, saveConfig, getDefaultConfig } from './config.js';
 import type { BootstrapConfig } from './types.js';
+import { BootstrapSource } from './types.js';
+import { createLogger, defaultLogger } from './logger.js';
+import { parseCliArgument, formatError } from './utils.js';
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -224,27 +227,21 @@ function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>,
     
     // Parse --fcli-url or --fcli-url=<value>
     if (arg.startsWith('--fcli-url')) {
-      if (arg.includes('=')) {
-        config.fcliUrl = arg.split('=')[1];
-      } else {
-        config.fcliUrl = args[++i];
-      }
+      const [value, newIndex] = parseCliArgument(args, i, '--fcli-url');
+      config.fcliUrl = value;
+      i = newIndex;
     } else if (arg.startsWith('--fcli-path')) {
-      if (arg.includes('=')) {
-        config.fcliPath = arg.split('=')[1];
-      } else {
-        config.fcliPath = args[++i];
-      }
+      const [value, newIndex] = parseCliArgument(args, i, '--fcli-path');
+      config.fcliPath = value;
+      i = newIndex;
     } else if (arg === '--verify-signature') {
       config.verifySignature = true;
     } else if (arg === '--no-verify-signature') {
       config.verifySignature = false;
     } else if (arg.startsWith('--fcli-rsa-sha256-url')) {
-      if (arg.includes('=')) {
-        config.fcliRsaSha256Url = arg.split('=')[1];
-      } else {
-        config.fcliRsaSha256Url = args[++i];
-      }
+      const [value, newIndex] = parseCliArgument(args, i, '--fcli-rsa-sha256-url');
+      config.fcliRsaSha256Url = value;
+      i = newIndex;
     } else if (arg === '--reset') {
       reset = true;
     } else if (arg === '--show') {
@@ -303,7 +300,7 @@ async function main(): Promise<void> {
       if (reset) {
         const { resetConfig } = await import('./config.js');
         resetConfig();
-        console.log('✓ Configuration reset to defaults\n');
+        defaultLogger.info('✓ Configuration reset to defaults\n');
         const currentConfig = loadConfig();
         displayConfig(currentConfig);
         process.exit(0);
@@ -326,7 +323,7 @@ async function main(): Promise<void> {
       
       saveConfig(newConfig);
       
-      console.log('✓ Configuration saved\n');
+      defaultLogger.info('✓ Configuration saved\n');
       displayConfig(newConfig);
       
       process.exit(0);
@@ -365,29 +362,29 @@ async function main(): Promise<void> {
       });
       
       if (result.exitCode !== 0) {
-        console.error(`\n❌ Error: fcli tool env command failed with exit code ${result.exitCode}\n`);
-        console.error('Troubleshooting suggestions:');
-        console.error('  • Verify your subcommand and options are correct');
-        if (result.bootstrap.source === 'configured' || result.bootstrap.source === 'preinstalled') {
-          console.error('  • Your custom fcli may be too old or incompatible (requires fcli 3.14.0 or later)');
-          console.error('  • Try using the default version: npx @fortify/setup config --reset');
+        defaultLogger.error(`\n❌ Error: fcli tool env command failed with exit code ${result.exitCode}\n`);
+        defaultLogger.error('Troubleshooting suggestions:');
+        defaultLogger.error('  • Verify your subcommand and options are correct');
+        if (result.bootstrap.source === BootstrapSource.CONFIGURED || result.bootstrap.source === BootstrapSource.PREINSTALLED) {
+          defaultLogger.error('  • Your custom fcli may be too old or incompatible (requires fcli 3.14.0 or later)');
+          defaultLogger.error('  • Try using the default version: npx @fortify/setup config --reset');
         }
-        console.error('');
+        defaultLogger.error('');
       } else if (result.output) {
         // Print the output (for format subcommands, not for init)
-        console.log(result.output);
+        defaultLogger.info(result.output);
       }
       
       process.exit(result.exitCode);
     }
     
     // Unknown command
-    console.error(`Unknown command: ${command}`);
-    console.error('Run "npx @fortify/setup --help" for usage information');
+    defaultLogger.error(`Unknown command: ${command}`);
+    defaultLogger.error('Run "npx @fortify/setup --help" for usage information');
     process.exit(1);
     
-  } catch (error: any) {
-    console.error(`\n❌ Error: ${error.message}\n`);
+  } catch (error) {
+    defaultLogger.error(`\n❌ Error: ${formatError(error)}\n`);
     process.exit(1);
   }
 }

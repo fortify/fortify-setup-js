@@ -6,6 +6,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import type { BootstrapConfig, BootstrapOptions } from './types.js';
+import { defaultLogger } from './logger.js';
+import { validateUrl, formatError } from './utils.js';
 
 const CONFIG_DIR = path.join(os.homedir(), '.config', 'fortify', 'setup');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
@@ -57,8 +59,8 @@ export function loadConfig(): BootstrapConfig {
     const content = fs.readFileSync(CONFIG_FILE, 'utf-8');
     const saved = JSON.parse(content);
     return { ...defaults, ...saved };
-  } catch (error: any) {
-    console.warn(`Warning: Failed to load config from ${CONFIG_FILE}: ${error.message}`);
+  } catch (error) {
+    defaultLogger.warn(`Warning: Failed to load config from ${CONFIG_FILE}: ${formatError(error)}`);
     return defaults;
   }
 }
@@ -115,7 +117,7 @@ export function getEffectiveConfig(options: BootstrapOptions = {}): BootstrapCon
   }
   
   // Runtime options take highest precedence
-  return {
+  const finalConfig: BootstrapConfig = {
     ...fileConfig,
     ...envOverrides,
     ...(options.fcliUrl && { fcliUrl: options.fcliUrl }),
@@ -123,6 +125,16 @@ export function getEffectiveConfig(options: BootstrapOptions = {}): BootstrapCon
     ...(options.verifySignature !== undefined && { verifySignature: options.verifySignature }),
     ...(options.fcliPath && { fcliPath: options.fcliPath })
   };
+  
+  // Validate URLs if present
+  if (finalConfig.fcliUrl) {
+    validateUrl(finalConfig.fcliUrl, 'fcli-url');
+  }
+  if (finalConfig.fcliRsaSha256Url) {
+    validateUrl(finalConfig.fcliRsaSha256Url, 'fcli-rsa-sha256-url');
+  }
+  
+  return finalConfig;
 }
 
 /**

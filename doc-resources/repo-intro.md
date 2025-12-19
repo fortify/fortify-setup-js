@@ -11,12 +11,12 @@ Once you've configured the above, you can use `npx @fortify/setup install` to bo
 
 ## Introduction
 
-The `@fortify/setup` npm package provides a lightweight, zero-dependency utility for bootstrapping [fcli](https://github.com/fortify/fcli) and running the fortify-setup action in any environment.
+The `@fortify/setup` npm package provides a lightweight utility with minimal dependencies for bootstrapping [fcli](https://github.com/fortify/fcli) and running `fcli tool env` commands for initializing the Fortify tools environment and generating corresponding environment variables in any environment.
 
 **Key Features:**
 
 * Bootstrap fcli automatically from GitHub releases with signature verification
-* Zero runtime dependencies for minimal attack surface
+* Minimal runtime dependencies (tar, undici, unzipper) for secure archive handling
 * Intelligent caching with CI/CD environment auto-detection
 * Multi-platform support (Linux, macOS, Windows)
 * Three-tier configuration (file, environment variables, CLI arguments)

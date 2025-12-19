@@ -54,6 +54,16 @@ export interface BootstrapOptions {
 }
 
 /**
+ * Bootstrap source types
+ */
+export enum BootstrapSource {
+  CONFIGURED = 'configured',
+  PREINSTALLED = 'preinstalled',
+  DOWNLOAD = 'download',
+  CACHED = 'cached'
+}
+
+/**
  * Bootstrap result
  */
 export interface BootstrapResult {
@@ -63,8 +73,8 @@ export interface BootstrapResult {
   /** Fcli version */
   version: string;
   
-  /** Source: configured|preinstalled|download */
-  source: string;
+  /** Source: configured|preinstalled|download|cached */
+  source: BootstrapSource;
 }
 
 /**
