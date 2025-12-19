@@ -35,25 +35,19 @@ See `src/index.ts` for the complete implementation. Key points:
 
 ### 1. Import the Library
 ```typescript
-import { runFortifySetup, runFortifyEnv } from '@fortify/setup';
+import { runFortifyEnv } from '@fortify/setup';
 import * as core from '@actions/core';
 ```
 
 ### 2. Get Action Inputs
 ```typescript
-const scClientVersion = core.getInput('sc-client');
-const fcliVersion = core.getInput('fcli');
-const exportPath = core.getBooleanInput('export-path');
+const tools = core.getInput('tools') || 'fcli:auto,sc-client:auto';
 ```
 
-### 3. Run fortify-setup
+### 3. Initialize Tools
 ```typescript
-await runFortifySetup({
-  args: [
-    scClientVersion && `--sc-client=${scClientVersion}`,
-    fcliVersion && `--fcli=${fcliVersion}`,
-    exportPath && '--export-path'
-  ].filter(Boolean),
+await runFortifyEnv({
+  args: ['init', `--tools=${tools}`],
   verbose: true
 });
 ```
@@ -61,10 +55,10 @@ await runFortifySetup({
 ### 4. Generate Environment Variables
 ```typescript
 const envResult = await runFortifyEnv({
-  args: ['--format=github']
+  args: ['github']
 });
 
-// Output is automatically added to GITHUB_ENV by fcli
+// Output is automatically appended to GITHUB_ENV by fcli
 ```
 
 ## Action Configuration
@@ -73,19 +67,12 @@ The `action.yml` file defines the action metadata:
 
 ```yaml
 name: 'Fortify Setup'
-description: 'Install Fortify tools using @fortify/setup'
+description: 'Initialize Fortify tools using @fortify/setup'
 inputs:
-  sc-client:
-    description: 'ScanCentral Client version'
+  tools:
+    description: 'Comma-separated list of tools with versions (e.g., fcli:auto,sc-client:24.4)'
     required: false
-  fcli:
-    description: 'fcli version'
-    required: false
-    default: 'latest'
-  export-path:
-    description: 'Export tools to PATH'
-    required: false
-    default: 'true'
+    default: 'fcli:auto,sc-client:auto'
 runs:
   using: 'node20'
   main: 'dist/index.js'
@@ -118,9 +105,7 @@ jobs:
       - name: Setup Fortify
         uses: your-org/fortify-setup-action@v1
         with:
-          sc-client: 'latest'
-          fcli: 'latest'
-          export-path: true
+          tools: 'fcli:auto,sc-client:24.4'
       
       - name: Run scan
         run: |
@@ -144,41 +129,39 @@ See the official Fortify GitHub Action for a production-ready implementation:
 
 ## Advanced Usage
 
-### Custom Bootstrap Options
+### Custom Tool Initialization
 ```typescript
-await runFortifySetup({
-  args: ['--sc-client=latest'],
-  cacheEnabled: false,  // Disable caching in CI
-  baseUrl: 'https://custom-mirror.example.com/fcli/releases',
-  verifySignature: true
+await runFortifyEnv({
+  args: ['init', '--tools=fcli:3.6.1,sc-client:24.4.0'],
+  verbose: true
 });
 ```
 
 ### Error Handling
 ```typescript
 try {
-  const result = await runFortifySetup({
-    args: ['--sc-client=latest']
+  const result = await runFortifyEnv({
+    args: ['init', '--tools=fcli:auto,sc-client:latest']
   });
   
   if (result.exitCode !== 0) {
-    core.setFailed(`fortify-setup failed with exit code ${result.exitCode}`);
+    core.setFailed(`Tool initialization failed with exit code ${result.exitCode}`);
   }
 } catch (error) {
   core.setFailed(error.message);
 }
 ```
 
-### Multiple Actions
+### Complete Workflow
 ```typescript
-// Install tools
-await runFortifySetup({
-  args: ['--sc-client=latest']
+// Initialize tools
+await runFortifyEnv({
+  args: ['init', '--tools=fcli:auto,sc-client:latest']
 });
 
-// Get environment variables
+// Generate environment variables
 const envResult = await runFortifyEnv({
-  args: ['--format=github']
+  args: ['github']
 });
 
 // Access bootstrap information

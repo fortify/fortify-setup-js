@@ -22,16 +22,16 @@ The `@fortify/setup` package can be used in two ways:
 TypeScript-based GitHub Action that wraps `@fortify/setup` to provide a native GitHub Actions experience with proper inputs, outputs, and error handling.
 
 **Key Features:**
-- Uses TypeScript library API (`runFortifySetup`, `runFortifyEnv`)
+- Uses TypeScript library API (`runFortifyEnv`)
 - Leverages `@actions/core` for inputs/outputs
 - Integrates with GitHub Actions toolkit
 - Example: [fortify/github-action](https://github.com/fortify/github-action)
 
 ### [Azure DevOps Task](./azure-devops-task/)
-TypeScript-based Azure DevOps task that uses `@fortify/setup` to create a pipeline task for installing Fortify tools.
+TypeScript-based Azure DevOps task that uses `@fortify/setup` to create a pipeline task for initializing Fortify tools.
 
 **Key Features:**
-- Uses TypeScript library API
+- Uses TypeScript library API (`runFortifyEnv`)
 - Leverages `azure-pipelines-task-lib` for task inputs
 - Integrates with Azure DevOps task framework
 - Proper error handling and logging
@@ -65,17 +65,16 @@ Shell-based GitLab CI component that uses `@fortify/setup` CLI for setting up Fo
 
 ### TypeScript Library Pattern
 ```typescript
-import { runFortifySetup, runFortifyEnv } from '@fortify/setup';
+import { runFortifyEnv } from '@fortify/setup';
 
-// Install tools
-await runFortifySetup({
-  args: ['--sc-client=latest'],
-  cacheEnabled: false,
+// Initialize tools
+await runFortifyEnv({
+  args: ['init', '--tools=fcli:auto,sc-client:latest'],
   verbose: true
 });
 
-// Get environment variables
-const result = await runFortifyEnv();
+// Generate environment variables
+const result = await runFortifyEnv({ args: ['shell'] });
 console.log(result.output);
 ```
 
@@ -83,14 +82,15 @@ console.log(result.output);
 ```bash
 #!/bin/bash
 
-# Install tools
-npx @fortify/setup run --sc-client=latest
+# Initialize tools
+npx @fortify/setup env init --tools=fcli:auto,sc-client:latest
 
-# Get environment variables
-eval $(npx @fortify/setup env)
+# Generate and source environment variables
+eval "$(npx @fortify/setup env shell)"
 
 # Use installed tools
 fcli --version
+scancentral --version
 ```
 
 ## Getting Started

@@ -1,11 +1,11 @@
 /**
  * Azure DevOps Task for Fortify Setup
  * 
- * This task uses the @fortify/setup TypeScript library to install
+ * This task uses the @fortify/setup TypeScript library to initialize
  * Fortify tools in Azure DevOps pipelines.
  */
 
-import { runFortifySetup, runFortifyEnv } from '@fortify/setup';
+import { runFortifyEnv } from '@fortify/setup';
 import * as tl from 'azure-pipelines-task-lib/task';
 
 /**
@@ -13,71 +13,35 @@ import * as tl from 'azure-pipelines-task-lib/task';
  */
 async function run(): Promise<void> {
   try {
-    // Get task inputs
-    const scClientVersion = tl.getInput('scClientVersion', false);
-    const fcliVersion = tl.getInput('fcliVersion', false) || 'latest';
-    const fodUploaderVersion = tl.getInput('fodUploaderVersion', false);
-    const debrickedCliVersion = tl.getInput('debrickedCliVersion', false);
-    const exportPath = tl.getBoolInput('exportPath', false);
-    const useToolCache = tl.getBoolInput('useToolCache', false);
+    // Get task inputs - tools list with versions
+    const tools = tl.getInput('tools', false) || 'fcli:auto,sc-client:auto';
+    const verbose = tl.getBoolInput('verbose', false);
 
-    // Build action arguments
-    const args: string[] = [];
-    
-    if (scClientVersion) {
-      args.push(`--sc-client=${scClientVersion}`);
-      tl.debug(`Adding ScanCentral Client version: ${scClientVersion}`);
-    }
-    
-    if (fcliVersion) {
-      args.push(`--fcli=${fcliVersion}`);
-      tl.debug(`Adding fcli version: ${fcliVersion}`);
-    }
-    
-    if (fodUploaderVersion) {
-      args.push(`--fod-uploader=${fodUploaderVersion}`);
-      tl.debug(`Adding FoD Uploader version: ${fodUploaderVersion}`);
-    }
-    
-    if (debrickedCliVersion) {
-      args.push(`--debricked-cli=${debrickedCliVersion}`);
-      tl.debug(`Adding Debricked CLI version: ${debrickedCliVersion}`);
-    }
-    
-    if (exportPath) {
-      args.push('--export-path');
-      tl.debug('Export to PATH enabled');
-    }
-    
-    if (useToolCache) {
-      args.push('--use-tool-cache');
-      tl.debug('Tool cache enabled');
-    }
+    tl.debug(`Tools to initialize: ${tools}`);
 
-    // Run fortify-setup action
-    console.log('Installing Fortify tools...');
+    // Initialize Fortify tools
+    console.log('Initializing Fortify tools...');
     
-    const setupResult = await runFortifySetup({
-      args,
-      cacheEnabled: false, // Disable fcli caching in CI
-      verbose: true
+    const initResult = await runFortifyEnv({
+      args: ['init', `--tools=${tools}`],
+      verbose
     });
 
-    if (setupResult.exitCode !== 0) {
+    if (initResult.exitCode !== 0) {
       tl.setResult(
         tl.TaskResult.Failed, 
-        `fortify-setup action failed with exit code ${setupResult.exitCode}`
+        `Tool initialization failed with exit code ${initResult.exitCode}`
       );
       return;
     }
 
-    console.log('✓ Fortify tools installed successfully');
+    console.log('✓ Fortify tools initialized successfully');
 
     // Generate environment variables for Azure DevOps
     console.log('Setting up environment variables...');
     
     const envResult = await runFortifyEnv({
-      args: ['--format=ado']
+      args: ['ado']
     });
 
     if (envResult.exitCode !== 0) {

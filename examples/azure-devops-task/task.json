@@ -3,8 +3,8 @@
   "id": "00000000-0000-0000-0000-000000000000",
   "name": "FortifySetup",
   "friendlyName": "Fortify Setup",
-  "description": "Install Fortify tools using @fortify/setup",
-  "helpMarkDown": "Install Fortify tools for security scanning. [More Information](https://github.com/fortify/fortify-setup-js)",
+  "description": "Initialize Fortify tools using @fortify/setup",
+  "helpMarkDown": "Initialize Fortify tools for security scanning. [More Information](https://github.com/fortify/fortify-setup-js)",
   "category": "Utility",
   "author": "Fortify",
   "version": {
@@ -12,55 +12,23 @@
     "Minor": 0,
     "Patch": 0
   },
-  "instanceNameFormat": "Setup Fortify Tools",
+  "instanceNameFormat": "Initialize Fortify Tools",
   "inputs": [
     {
-      "name": "scClientVersion",
+      "name": "tools",
       "type": "string",
-      "label": "ScanCentral Client Version",
-      "defaultValue": "",
+      "label": "Tools to Initialize",
+      "defaultValue": "fcli:auto,sc-client:auto",
       "required": false,
-      "helpMarkDown": "Version of ScanCentral Client to install (e.g., latest, 24.4.0, auto, skip)"
+      "helpMarkDown": "Comma-separated list of tools with versions (e.g., fcli:auto,sc-client:24.4, or fcli:latest,sc-client:auto)"
     },
     {
-      "name": "fcliVersion",
-      "type": "string",
-      "label": "fcli Version",
-      "defaultValue": "latest",
-      "required": false,
-      "helpMarkDown": "Version of fcli to install (e.g., latest, auto, skip)"
-    },
-    {
-      "name": "fodUploaderVersion",
-      "type": "string",
-      "label": "FoD Uploader Version",
-      "defaultValue": "",
-      "required": false,
-      "helpMarkDown": "Version of Fortify on Demand Uploader to install"
-    },
-    {
-      "name": "debrickedCliVersion",
-      "type": "string",
-      "label": "Debricked CLI Version",
-      "defaultValue": "",
-      "required": false,
-      "helpMarkDown": "Version of Debricked CLI to install"
-    },
-    {
-      "name": "exportPath",
+      "name": "verbose",
       "type": "boolean",
-      "label": "Export to PATH",
-      "defaultValue": "true",
-      "required": false,
-      "helpMarkDown": "Add installed tools to PATH for use in subsequent tasks"
-    },
-    {
-      "name": "useToolCache",
-      "type": "boolean",
-      "label": "Use Tool Cache",
+      "label": "Verbose Output",
       "defaultValue": "false",
       "required": false,
-      "helpMarkDown": "Use Azure Pipelines tool cache for installed tools"
+      "helpMarkDown": "Enable verbose output for debugging"
     }
   ],
   "execution": {

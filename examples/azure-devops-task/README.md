@@ -35,25 +35,19 @@ See `src/index.ts` for the complete implementation. Key points:
 
 ### 1. Import the Library
 ```typescript
-import { runFortifySetup, runFortifyEnv } from '@fortify/setup';
+import { runFortifyEnv } from '@fortify/setup';
 import * as tl from 'azure-pipelines-task-lib/task';
 ```
 
 ### 2. Get Task Inputs
 ```typescript
-const scClientVersion = tl.getInput('scClientVersion', false);
-const fcliVersion = tl.getInput('fcliVersion', false) || 'latest';
-const exportPath = tl.getBoolInput('exportPath', false);
+const tools = tl.getInput('tools', false) || 'fcli:auto,sc-client:auto';
 ```
 
-### 3. Run fortify-setup
+### 3. Initialize Tools
 ```typescript
-await runFortifySetup({
-  args: [
-    scClientVersion && `--sc-client=${scClientVersion}`,
-    fcliVersion && `--fcli=${fcliVersion}`,
-    exportPath && '--export-path'
-  ].filter(Boolean),
+await runFortifyEnv({
+  args: ['init', `--tools=${tools}`],
   verbose: true
 });
 ```
@@ -61,10 +55,10 @@ await runFortifySetup({
 ### 4. Generate Environment Variables
 ```typescript
 const envResult = await runFortifyEnv({
-  args: ['--format=ado']
+  args: ['ado']
 });
 
-// Output is automatically added to pipeline variables by fcli
+// Output uses Azure DevOps logging commands to set pipeline variables
 ```
 
 ## Task Configuration
@@ -85,30 +79,15 @@ The `task.json` file defines the task metadata:
     "Minor": 0,
     "Patch": 0
   },
-  "instanceNameFormat": "Setup Fortify Tools",
+  "instanceNameFormat": "Initialize Fortify Tools",
   "inputs": [
     {
-      "name": "scClientVersion",
+      "name": "tools",
       "type": "string",
-      "label": "ScanCentral Client Version",
+      "label": "Tools to Initialize",
+      "defaultValue": "fcli:auto,sc-client:auto",
       "required": false,
-      "helpMarkDown": "Version of ScanCentral Client to install"
-    },
-    {
-      "name": "fcliVersion",
-      "type": "string",
-      "label": "fcli Version",
-      "defaultValue": "latest",
-      "required": false,
-      "helpMarkDown": "Version of fcli to install"
-    },
-    {
-      "name": "exportPath",
-      "type": "boolean",
-      "label": "Export to PATH",
-      "defaultValue": "true",
-      "required": false,
-      "helpMarkDown": "Add installed tools to PATH"
+      "helpMarkDown": "Comma-separated list of tools with versions (e.g., fcli:auto,sc-client:24.4)"
     }
   ],
   "execution": {
@@ -136,11 +115,9 @@ Once published, users can use your task:
 ```yaml
 steps:
 - task: FortifySetup@1
-  displayName: 'Setup Fortify Tools'
+  displayName: 'Initialize Fortify Tools'
   inputs:
-    scClientVersion: 'latest'
-    fcliVersion: 'latest'
-    exportPath: true
+    tools: 'fcli:auto,sc-client:24.4'
 
 - script: |
     fcli --version
@@ -197,25 +174,24 @@ Create a `vss-extension.json` for publishing to the marketplace:
 
 ## Advanced Usage
 
-### Custom Bootstrap Options
+### Custom Tool Initialization
 ```typescript
-await runFortifySetup({
-  args: ['--sc-client=latest'],
-  cacheEnabled: false,  // Disable caching in CI
-  baseUrl: 'https://custom-mirror.example.com/fcli/releases'
+await runFortifyEnv({
+  args: ['init', '--tools=fcli:3.6.1,sc-client:24.4.0'],
+  verbose: true
 });
 ```
 
 ### Error Handling
 ```typescript
 try {
-  const result = await runFortifySetup({
-    args: ['--sc-client=latest']
+  const result = await runFortifyEnv({
+    args: ['init', '--tools=fcli:auto,sc-client:latest']
   });
   
   if (result.exitCode !== 0) {
     tl.setResult(tl.TaskResult.Failed, 
-      `fortify-setup failed with exit code ${result.exitCode}`);
+      `Tool initialization failed with exit code ${result.exitCode}`);
   }
 } catch (error) {
   tl.setResult(tl.TaskResult.Failed, error.message);

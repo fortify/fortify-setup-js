@@ -59,16 +59,12 @@ fortify-setup:
       
       # Run fortify-setup env init
       if [ -n "$TOOLS" ]; then
-        @fortify/setup env init --tools "$TOOLS"
+        fortify-setup env init --tools "$TOOLS"
       fi
       
       # Generate environment variables for downstream jobs
       echo "Generating environment variables..."
-      EXCLUDE_ARGS=""
-      if [ "$[[ inputs.export-path ]]" != "true" ]; then
-        EXCLUDE_ARGS="--exclude=path"
-      fi
-      @fortify/setup env gitlab $EXCLUDE_ARGS --file fortify-tools.env
+      fortify-setup env gitlab > fortify-tools.env
       
       echo "✓ Fortify tools setup complete"
   

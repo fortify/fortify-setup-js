@@ -2,30 +2,33 @@
 
 ## Overview
 
-`@fortify/setup` is a cross-platform utility that automates the setup of Fortify tools in CI/CD pipelines and local development environments. It works through a multi-stage bootstrap process:
+`@fortify/setup` is a cross-platform utility that automates the setup of Fortify tools in CI/CD pipelines and local development environments by providing a wrapper around `fcli tool env` commands:
 
 1. **Configure fcli bootstrapping** (optional) - Use the `config` command to specify custom fcli download URLs or point to a pre-installed fcli binary (must be 3.14.0+)
 
-2. **Bootstrap latest fcli v3.x** - On every `install` command, downloads and verifies the latest fcli v3.x release from GitHub (or uses configured pre-installed fcli)
+2. **Bootstrap fcli** - Automatically downloads and verifies fcli v3.x from GitHub (or uses configured pre-installed fcli)
 
-3. **Run fcli tool setup command** - Uses the bootstrapped fcli to detect, install, and configure user-requested versions of fcli and other Fortify tools (ScanCentral Client, FoD Uploader, Debricked CLI)
+3. **Initialize tools** - Use `env init` to detect, install, and configure Fortify tools (fcli, ScanCentral Client, FoD Uploader, Debricked CLI)
 
-4. **Generate environment variables** (optional) - Use the `env` command to generate tool-related environment variables and PATH updates for installed tools
+4. **Generate environment variables** - Use platform-specific `env` subcommands (`shell`, `github`, `ado`, `gitlab`, `powershell`) to generate tool-related environment variables and PATH updates
 
-The downloaded fcli from step 2 is saved to an internal cache, allowing the `env` command to reuse it without re-downloading.
+The bootstrapped fcli is saved to an internal cache, allowing subsequent `env` commands to reuse it without re-downloading.
 
 ## Quick Start
 
 ```bash
-# Run with default settings (downloads latest fcli v3.x, installs tools)
-npx @fortify/setup install --tools=fcli,sc-client
+# Initialize tools with auto-detected versions
+npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
 
-# Use pre-installed fcli (skip download, must be 3.14.0+)
-npx @fortify/setup config --fcli-path=/usr/local/bin/fcli
-npx @fortify/setup install --tools=fcli
-
-# Generate environment variables after setup
+# Generate shell environment variables
 npx @fortify/setup env shell
+
+# Or use pre-installed fcli (skip download, must be 3.14.0+)
+npx @fortify/setup config --fcli-path=/usr/local/bin/fcli
+npx @fortify/setup env init --tools=sc-client:auto
+
+# Generate GitHub Actions environment
+npx @fortify/setup env github
 ```
 
 ## Installation
@@ -36,13 +39,13 @@ npx @fortify/setup env shell
 npm install -g @fortify/setup
 
 # Use shorter command
-fortify-setup install --fcli=latest
+fortify-setup env init --tools=fcli:auto
 ```
 
 ### npx (No installation required)
 
 ```bash
-npx @fortify/setup install --fcli=latest
+npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
 ```
 
 ### As project dependency
@@ -55,91 +58,91 @@ npm install --save-dev @fortify/setup
 ```json
 {
   "scripts": {
-    "fortify-setup": "fortify-setup install --fcli=latest"
+    "fortify-init": "fortify-setup env init --tools=fcli:auto,sc-client:auto",
+    "fortify-env": "fortify-setup env shell"
   }
 }
 ```
 
 **For programmatic/library usage:**
 ```typescript
-import { runFortifySetup, runFortifyEnv } from '@fortify/setup';
+import { runFortifyEnv } from '@fortify/setup';
 
-await runFortifySetup({
-  args: ['--tools=sc-client']
+// Initialize tools
+await runFortifyEnv({
+  args: ['init', '--tools=fcli:auto,sc-client:auto'],
+  verbose: true
 });
+
+// Generate environment variables
+const result = await runFortifyEnv({
+  args: ['shell']
+});
+console.log(result.output);
 ```
 
 ## Commands
 
-### `install` - Install/setup Fortify tools
+### `env` - Initialize tools and generate environment variables
 
 ```bash
-npx @fortify/setup install [options]
+npx @fortify/setup env <subcommand> [options]
 ```
 
-Bootstraps fcli (always re-downloads latest v3.x to ensure latest version is used) and runs the fcli tool setup command to install Fortify tools. All options are passed through to the fcli tool setup command.
+Provides a unified interface to `fcli tool env` commands for both tool initialization and environment variable generation. Automatically bootstraps fcli if not available in cache or via configuration.
+
+**Subcommands:**
+- `init` - Initialize/install Fortify tools (wraps `fcli tool env init`)
+- `shell` - Generate POSIX shell exports
+- `powershell` (or `pwsh`) - Generate PowerShell assignments
+- `github` - Append to GitHub Actions environment files
+- `gitlab` - Write to a GitLab environment file
+- `ado` - Generate Azure DevOps logging commands
+- `expr` - Evaluate custom template expressions
 
 **Options:**
 - `--help|-h` - Show this help information
-- `--fcli-help` - Show fcli tool setup help
+- `--fcli-help` - Show fcli tool env help
 
-**Common tool setup options:**
-- `--tools=<tools>` - Comma-separated list of tools to install (e.g., fcli,sc-client,fod-uploader)
-- `--air-gapped` - Air-gapped mode (use pre-installed tools only)
-- `--tool-cache-pattern=<pattern>` - Use CI/CD platform tool cache when available
-
-**Examples:**
-```bash
-# Install ScanCentral Client
-npx @fortify/setup install --tools=sc-client
-
-# Install multiple tools
-npx @fortify/setup install --tools=fcli,sc-client
-
-# Air-gapped mode (pre-installed tools only)
-npx @fortify/setup install --tools=sc-client --air-gapped
-
-# Show fcli tool setup help
-npx @fortify/setup install --fcli-help
-```
-
-### `env` - Generate environment variables
-
-```bash
-npx @fortify/setup env <type> [options]
-```
-
-Generates environment variable definitions for installed Fortify tools in various formats (shell, GitHub Actions, Azure DevOps, etc.). Must be run after the `install` command has executed at least once.
-
-**Options:**
-- `--help|-h` - Show this help information
-- `--fcli-help` - Show fcli tool env help (fortify-setup env --fcli-help shows information on available types, fortify-setup env <type> --fcli-help shows help for that specific type)
-
-**Supported types:**
-- `shell` - Shell environment variables (default)
-- `github` - GitHub Actions format
-- `ado` - Azure DevOps format
-- `gitlab` - GitLab CI format
-- `powershell` - PowerShell format
-- `expr` - Expression format
-
-**Common options:**
-- `--tools=<tools>` - Comma-separated list of tools to include (e.g., sc-client,fcli)
+**Common init options:**
+- `--tools=<tool1>[:<version>],<tool2>[:<version>],...` - Tools to initialize
+  - Format: `toolname:version` where version can be:
+    - Specific version: `sc-client:24.4.0`, `fcli:3.6.1`
+    - Latest: `sc-client:latest`, `fcli:latest`
+    - Auto-detect: `sc-client:auto`, `fcli:auto`
+    - Path: `sc-client:/path/to/scancentral`
+  - Available tools: `fcli`, `sc-client`, `fod-uploader`, `debricked-cli`
 
 **Examples:**
 ```bash
-# Generate shell format (default)
+# Initialize with auto-detected versions
+npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
+
+# Initialize with specific versions
+npx @fortify/setup env init --tools=fcli:3.6.1,sc-client:24.4.0
+
+# Initialize with latest versions
+npx @fortify/setup env init --tools=fcli:latest,sc-client:latest
+
+# Initialize with path to pre-installed tool
+npx @fortify/setup env init --tools=sc-client:/opt/scancentral/bin
+
+# Generate shell environment variables
 npx @fortify/setup env shell
 
-# Generate for GitHub Actions
+# Generate GitHub Actions environment
 npx @fortify/setup env github
 
 # Use in shell (bash/zsh)
-eval "$(npx @fortify/setup env shell)"
 source <(npx @fortify/setup env shell)
+eval "$(npx @fortify/setup env shell)"
 
-# Show fcli tool env help
-npx @fortify/setup env shell --fcli-help
+# Show general fcli tool env help
+npx @fortify/setup env --fcli-help
+
+# Show help for specific subcommand
+npx @fortify/setup env init --help
+npx @fortify/setup env shell --help
 ```
 
 ### `config` - Configure bootstrap settings
@@ -197,13 +200,14 @@ npx @fortify/setup config
 
 ## Bootstrap Behavior
 
-`@fortify/setup` always re-downloads the latest fcli v3.x on every `install` command to ensure the latest version is used. The downloaded fcli is saved to an internal cache for use by the `env` command.
+`@fortify/setup` automatically bootstraps fcli when needed by any `env` subcommand. The bootstrap process checks for existing fcli installations before downloading.
 
 **fcli resolution order:**
 
 1. **Configured path** - Via config file or `FCLI_PATH` env var (must be fcli 3.14.0+)
 2. **FCLI-specific environment variables** - `FCLI`, `FCLI_CMD`, or `FCLI_HOME` (must be 3.14.0+)
-3. **Download latest v3.x** - Always re-downloads to ensure latest version is used
+3. **Cached download** - Previously downloaded fcli in internal cache
+4. **Download latest v3.x** - If none of the above are available
 
 **Internal cache location:**
 - Linux/Mac: `/tmp/fortify/fcli/`
@@ -246,7 +250,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Setup Fortify tools
-        run: npx @fortify/setup install --tools=fcli,sc-client
+        run: npx @fortify/setup env init --tools=fcli:auto,sc-client:24.4
       
       - name: Generate environment variables
         run: npx @fortify/setup env github >> $GITHUB_ENV
@@ -266,7 +270,7 @@ steps:
     displayName: 'Setup Fortify tools'
     inputs:
       command: 'custom'
-      customCommand: 'npx @fortify/setup install --tools=fcli,sc-client'
+      customCommand: 'npx @fortify/setup env init --tools=fcli:auto,sc-client:auto'
   
   - script: |
       npx @fortify/setup env ado
@@ -284,7 +288,7 @@ steps:
 fortify-scan:
   image: node:20
   script:
-    - npx @fortify/setup install --tools=fcli,sc-client
+    - npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
     - eval "$(npx @fortify/setup env shell)"
     - fcli ssc session login --url $SSC_URL --token $SSC_TOKEN
     - fcli sc-sast scan start --publish-to SSC --upload
@@ -295,11 +299,11 @@ fortify-scan:
 
 ```dockerfile
 FROM node:20-alpine AS fortify-setup
-RUN npx @fortify/setup install --tools=fcli,sc-client
+RUN npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
 
 FROM maven:3.9-eclipse-temurin-17
 COPY --from=fortify-setup /tmp/fortify/fcli /tmp/fortify/fcli
-RUN eval "$(node -e 'console.log(process.env.PATH)' && npx @fortify/setup env)"
+RUN eval "$(npx @fortify/setup env shell)"
 
 # Verify installation
 RUN fcli --version && scancentral --version
@@ -317,8 +321,8 @@ RUN scancentral package -o app.zip
 # One-time: Configure to use pre-installed fcli (if available)
 npx @fortify/setup config --fcli-path=/usr/local/bin/fcli
 
-# Run tool setup to install tools
-npx @fortify/setup install --tools=fcli,sc-client
+# Initialize Fortify tools
+npx @fortify/setup env init --tools=fcli:auto,sc-client:24.4
 
 # Generate and source environment variables
 eval "$(npx @fortify/setup env shell)"
@@ -339,8 +343,8 @@ fcli sc-sast scan start --upload
 # Install fcli 3.14.0+ manually, then configure
 npx @fortify/setup config --fcli-path=/usr/local/bin/fcli
 
-# Run tool setup with pre-installed fcli
-npx @fortify/setup install --tools=fcli,sc-client
+# Initialize tools with pre-installed fcli
+npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
 ```
 
 **Option 2: Custom download location**
@@ -356,8 +360,8 @@ npx @fortify/setup config \
   --fcli-url=https://internal-mirror.company.com/fortify/fcli-linux.tgz \
   --no-verify-signature
 
-# Run
-npx @fortify/setup install --tools=fcli
+# Initialize tools
+npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
 ```
 
 **Option 3: Environment variables for CI/CD**
@@ -367,8 +371,8 @@ npx @fortify/setup install --tools=fcli
 export FCLI_PATH=/opt/fortify/fcli/bin/fcli
 export FCLI_VERIFY_SIGNATURE=false
 
-# Run without additional config
-npx @fortify/setup install --tools=fcli
+# Initialize tools without additional config
+npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
 ```
 
 ## Programmatic API
@@ -395,16 +399,16 @@ console.log(`Verify signature: ${config.verifySignature}`);
 ### Running Actions Programmatically
 
 ```typescript
-import { runFortifySetup, runFortifyEnv } from '@fortify/setup';
+import { runFortifyEnv } from '@fortify/setup';
 
-// Run tool setup
-const setupResult = await runFortifySetup({
-  args: ['--tools=sc-client,fcli'],
+// Initialize tools
+const initResult = await runFortifyEnv({
+  args: ['init', '--tools=fcli:auto,sc-client:24.4'],
   verbose: true
 });
 
-console.log(`Exit code: ${setupResult.exitCode}`);
-console.log(`Fcli path: ${setupResult.bootstrap.fcliPath}`);
+console.log(`Exit code: ${initResult.exitCode}`);
+console.log(`Fcli path: ${initResult.bootstrap.fcliPath}`);
 
 // Generate environment variables
 const envResult = await runFortifyEnv({
@@ -473,27 +477,29 @@ npx @fortify/setup config --fcli-path=/usr/local/bin/fcli
 
 # Or use environment variable
 export FCLI_PATH=/usr/local/bin/fcli
-npx @fortify/setup install --fcli=latest
+npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
 ```
 
-### `env` command fails with "no downloaded fcli"
+### `env` command fails
 
 ```bash
-# The env command requires run to be executed first
-npx @fortify/setup install --tools=fcli
-npx @fortify/setup env
+# Ensure tools are initialized first
+npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
+npx @fortify/setup env shell
 
 # Or configure pre-installed fcli
 npx @fortify/setup config --fcli-path=/usr/local/bin/fcli
-npx @fortify/setup env
+npx @fortify/setup env shell
 ```
 
-### CI/CD always downloading fcli
+### CI/CD downloading fcli on every run
 
 ```bash
-# This is expected behavior
-# Each run command re-downloads latest v3.x to ensure latest version is used
-# Downloads are fast (~10MB) and guarantee up-to-date features and security patches
+# Bootstrap downloads fcli only if not found in cache or via configuration
+# To avoid downloads:
+# 1. Configure pre-installed fcli: --fcli-path=/usr/local/bin/fcli
+# 2. Or use FCLI_PATH environment variable
+# 3. Or leverage CI/CD tool cache between runs
 ```
 
 ### Proxy configuration
@@ -504,13 +510,13 @@ export HTTP_PROXY=http://proxy.company.com:8080
 export HTTPS_PROXY=http://proxy.company.com:8080
 
 # @fortify/setup automatically uses these for downloads
-npx @fortify/setup install --fcli=latest
+npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
 ```
 
 ## Related Projects
 
 - **[fcli]({{var:fcli-url}})** - Fortify CLI (what this package bootstraps)
-- **[fortify-setup action]({{var:fcli-url}}/blob/main/fcli-other/fcli-functional/src/main/resources/com/fortify/cli/ftest/app/root/action-default.yaml)** - The fcli action that @fortify/setup runs
+- **[fcli tool env commands]({{var:fcli-url}}/tree/main/fcli-core/fcli-tool/src/main/java/com/fortify/cli/tool/env/cli/cmd)** - The fcli commands that @fortify/setup wraps
 - **[fortify/github-action](https://github.com/fortify/github-action)** - GitHub Action wrapper for @fortify/setup
 
 For more information, see {{var:gh-pages-url}}.

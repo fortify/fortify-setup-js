@@ -1,11 +1,11 @@
 /**
  * GitHub Action for Fortify Setup
  * 
- * This action uses the @fortify/setup TypeScript library to install
+ * This action uses the @fortify/setup TypeScript library to initialize
  * Fortify tools in GitHub Actions workflows.
  */
 
-import { runFortifySetup, runFortifyEnv } from '@fortify/setup';
+import { runFortifyEnv } from '@fortify/setup';
 import * as core from '@actions/core';
 
 /**
@@ -13,61 +13,29 @@ import * as core from '@actions/core';
  */
 async function run(): Promise<void> {
   try {
-    // Get action inputs
-    const scClientVersion = core.getInput('sc-client');
-    const fcliVersion = core.getInput('fcli');
-    const fodUploaderVersion = core.getInput('fod-uploader');
-    const debrickedCliVersion = core.getInput('debricked-cli');
-    const exportPath = core.getBooleanInput('export-path');
-    const useToolCache = core.getBooleanInput('use-tool-cache');
+    // Get action inputs - tools list with versions
+    const tools = core.getInput('tools') || 'fcli:auto,sc-client:auto';
+    const verbose = core.getBooleanInput('verbose') || false;
 
-    // Build action arguments
-    const args: string[] = [];
+    // Initialize Fortify tools
+    core.info('Initializing Fortify tools...');
     
-    if (scClientVersion) {
-      args.push(`--sc-client=${scClientVersion}`);
-    }
-    
-    if (fcliVersion) {
-      args.push(`--fcli=${fcliVersion}`);
-    }
-    
-    if (fodUploaderVersion) {
-      args.push(`--fod-uploader=${fodUploaderVersion}`);
-    }
-    
-    if (debrickedCliVersion) {
-      args.push(`--debricked-cli=${debrickedCliVersion}`);
-    }
-    
-    if (exportPath) {
-      args.push('--export-path');
-    }
-    
-    if (useToolCache) {
-      args.push('--use-tool-cache');
-    }
-
-    // Run fortify-setup action
-    core.info('Installing Fortify tools...');
-    
-    const setupResult = await runFortifySetup({
-      args,
-      cacheEnabled: false, // Disable fcli caching in CI
-      verbose: true
+    const initResult = await runFortifyEnv({
+      args: ['init', `--tools=${tools}`],
+      verbose
     });
 
-    if (setupResult.exitCode !== 0) {
-      throw new Error(`fortify-setup action failed with exit code ${setupResult.exitCode}`);
+    if (initResult.exitCode !== 0) {
+      throw new Error(`Tool initialization failed with exit code ${initResult.exitCode}`);
     }
 
-    core.info('✓ Fortify tools installed successfully');
+    core.info('✓ Fortify tools initialized successfully');
 
     // Generate environment variables for GitHub Actions
     core.info('Setting up environment variables...');
     
     const envResult = await runFortifyEnv({
-      args: ['--format=github']
+      args: ['github']
     });
 
     if (envResult.exitCode !== 0) {

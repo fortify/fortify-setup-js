@@ -164,21 +164,30 @@ BOOTSTRAP BEHAVIOR
   Cached fcli is created by previous env commands or can be pre-populated.
 
 EXAMPLES
-  # Initialize tools
-  npx @fortify/setup env init --tools=sc-client
+  # Initialize tools with specific versions
+  npx @fortify/setup env init --tools=fcli:latest,sc-client:24.4
   
-  # Generate shell environment
+  # Initialize with auto-detected versions
+  npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
+  
+  # Generate shell environment variables
   npx @fortify/setup env shell
+  
+  # Generate GitHub Actions environment
+  npx @fortify/setup env github
   
   # Initialize and generate in one workflow
-  npx @fortify/setup env init --tools=fcli,sc-client
-  npx @fortify/setup env shell
+  npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
+  npx @fortify/setup env github
   
   # Use in shell (bash/zsh)
   source <(npx @fortify/setup env shell)
   
   # Show fcli tool env help
   npx @fortify/setup env --fcli-help
+  
+  # Show help for specific subcommand
+  npx @fortify/setup env init --help
 `);
 }
 

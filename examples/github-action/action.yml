@@ -1,38 +1,25 @@
 name: 'Fortify Setup'
-description: 'Install Fortify tools using @fortify/setup'
+description: 'Initialize Fortify tools using @fortify/setup'
 author: 'Fortify'
 branding:
   icon: 'shield'
   color: 'blue'
 
 inputs:
-  sc-client:
-    description: 'ScanCentral Client version to install (e.g., latest, 24.4.0, auto, skip)'
+  tools:
+    description: 'Comma-separated list of tools with versions (e.g., fcli:auto,sc-client:24.4, or fcli:latest,sc-client:auto)'
     required: false
-  fcli:
-    description: 'fcli version to install (e.g., latest, auto, skip)'
-    required: false
-    default: 'latest'
-  fod-uploader:
-    description: 'Fortify on Demand Uploader version to install'
-    required: false
-  debricked-cli:
-    description: 'Debricked CLI version to install'
-    required: false
-  export-path:
-    description: 'Add installed tools to PATH'
-    required: false
-    default: 'true'
-  use-tool-cache:
-    description: 'Use GitHub Actions tool cache for installed tools'
+    default: 'fcli:auto,sc-client:auto'
+  verbose:
+    description: 'Enable verbose output'
     required: false
     default: 'false'
 
 outputs:
   fcli-version:
-    description: 'Installed fcli version'
-  sc-client-version:
-    description: 'Installed ScanCentral Client version'
+    description: 'Initialized fcli version'
+  fcli-path:
+    description: 'Path to fcli binary'
 
 runs:
   using: 'node20'

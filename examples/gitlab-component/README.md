@@ -27,21 +27,9 @@ GitLab components use a `template.yml` file to define the component:
 ```yaml
 spec:
   inputs:
-    sc-client:
-      default: ''
-      description: 'ScanCentral Client version to install'
-    fcli:
-      default: 'latest'
-      description: 'fcli version to install'
-    fod-uploader:
-      default: ''
-      description: 'FoD Uploader version to install'
-    debricked-cli:
-      default: ''
-      description: 'Debricked CLI version to install'
-    export-path:
-      default: 'true'
-      description: 'Add installed tools to PATH'
+    tools:
+      default: 'fcli:auto,sc-client:auto'
+      description: 'Comma-separated list of tools with versions (e.g., fcli:auto,sc-client:24.4)'
 ---
 
 fortify-setup:
@@ -51,34 +39,11 @@ fortify-setup:
       # Install @fortify/setup
       npm install -g @fortify/setup
       
-      # Build arguments
-      ARGS=""
-      
-      if [ -n "$[[ inputs.sc-client ]]" ]; then
-        ARGS="$ARGS --sc-client=$[[ inputs.sc-client ]]"
-      fi
-      
-      if [ -n "$[[ inputs.fcli ]]" ]; then
-        ARGS="$ARGS --fcli=$[[ inputs.fcli ]]"
-      fi
-      
-      if [ -n "$[[ inputs.fod-uploader ]]" ]; then
-        ARGS="$ARGS --fod-uploader=$[[ inputs.fod-uploader ]]"
-      fi
-      
-      if [ -n "$[[ inputs.debricked-cli ]]" ]; then
-        ARGS="$ARGS --debricked-cli=$[[ inputs.debricked-cli ]]"
-      fi
-      
-      if [ "$[[ inputs.export-path ]]" = "true" ]; then
-        ARGS="$ARGS --export-path"
-      fi
-      
-      # Run fortify-setup
-      fortify-setup run $ARGS
+      # Initialize tools
+      fortify-setup env init --tools="$[[ inputs.tools ]]"
       
       # Generate environment variables
-      fortify-setup env >> $CI_ENV
+      fortify-setup env shell >> $CI_ENV
 ```
 
 ## Shell Script Approach
@@ -94,17 +59,11 @@ set -e
 # Install @fortify/setup globally
 npm install -g @fortify/setup
 
-# Configure environment
-export FCLI_CACHE_ENABLED=false  # Disable caching in CI
-
-# Run fortify-setup with arguments
-fortify-setup run \
-  --sc-client="${SC_CLIENT_VERSION:-latest}" \
-  --fcli="${FCLI_VERSION:-latest}" \
-  --export-path
+# Initialize tools with versions
+fortify-setup env init --tools="${TOOLS:-fcli:auto,sc-client:auto}"
 
 # Generate and source environment variables
-eval "$(fortify-setup env)"
+eval "$(fortify-setup env shell)"
 
 # Verify installation
 fcli --version
@@ -127,8 +86,7 @@ setup-fortify:
   stage: setup
   extends: fortify-setup
   inputs:
-    sc-client: 'latest'
-    fcli: 'latest'
+    tools: 'fcli:auto,sc-client:24.4'
 
 fortify-scan:
   stage: scan
@@ -147,8 +105,8 @@ fortify-setup:
   stage: setup
   script:
     - npm install -g @fortify/setup
-    - fortify-setup run --sc-client=latest --fcli=latest
-    - fortify-setup env >> fortify.env
+    - fortify-setup env init --tools=fcli:auto,sc-client:auto
+    - fortify-setup env shell >> fortify.env
   artifacts:
     reports:
       dotenv: fortify.env
@@ -174,8 +132,7 @@ fortify-setup:
   script:
     - bash ./scripts/setup.sh
   variables:
-    SC_CLIENT_VERSION: 'latest'
-    FCLI_VERSION: 'latest'
+    TOOLS: 'fcli:auto,sc-client:24.4'
 ```
 
 ## Key Benefits
@@ -210,8 +167,8 @@ variables:
   image: node:20-alpine
   before_script:
     - npm install -g @fortify/setup
-    - fortify-setup run --sc-client=latest
-    - eval "$(fortify-setup env)"
+    - fortify-setup env init --tools=fcli:auto,sc-client:auto
+    - eval "$(fortify-setup env shell)"
 
 sast-scan:
   extends: .fortify-setup
@@ -239,12 +196,10 @@ fortify-setup:
     - npm install -g @fortify/setup
     
     # Use pre-installed fcli
-    - fortify-setup configure --fcli-path=/usr/local/bin/fcli
+    - fortify-setup config --fcli-path=/usr/local/bin/fcli
     
-    # Install tools from internal mirror
-    - fortify-setup run \
-        --sc-client=latest \
-        --air-gapped
+    # Initialize tools
+    - fortify-setup env init --tools=fcli:auto,sc-client:auto
 ```
 
 ### Caching for Faster Builds
@@ -254,7 +209,7 @@ fortify-setup:
   image: node:20-alpine
   script:
     - npm install -g @fortify/setup
-    - fortify-setup run --sc-client=latest
+    - fortify-setup env init --tools=fcli:auto,sc-client:auto
   cache:
     key: fortify-tools
     paths:
@@ -287,10 +242,10 @@ fortify-setup:
 ### fcli not found after setup
 ```bash
 # Make sure to source the environment
-eval "$(fortify-setup env)"
+eval "$(fortify-setup env shell)"
 
 # Or use dotenv artifacts
-fortify-setup env >> fortify.env
+fortify-setup env shell >> fortify.env
 # Then use in job: needs: [...], dependencies: [...]
 ```
 
@@ -300,7 +255,7 @@ fortify-setup env >> fortify.env
 npm install -g @fortify/setup
 
 # Or use npx (no install required)
-npx @fortify/setup run --sc-client=latest
+npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
 ```
 
 ## Next Steps

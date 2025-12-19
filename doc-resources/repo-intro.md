@@ -7,7 +7,7 @@ You have two options:
 1. Manually pre-install fcli from the link above, then run `npx @fortify/setup config --fcli-path=<path to pre-installed fcli>`
 2. Configure `@fortify/setup` with the proper download URL, for example, for Linux, `npx @fortify/setup config --fcli-url=https://github.com/fortify/fcli/releases/download/dev_feat.ci-updates/fcli-linux.tgz`
 
-Once you've configured the above, you can use `npx @fortify/setup install` to bootstrap fcli and install Fortify tools, followed by `npx @fortify/setup env` to generate appropriate environment variables. Note that the latter will still undergo significant changes on the fcli side.
+Once you've configured the above, you can use `npx @fortify/setup env init --tools=fcli,sc-client` to bootstrap fcli and install Fortify tools, followed by `npx @fortify/setup env github` (or `shell`, `ado`, `gitlab`, etc.) to generate appropriate environment variables.
 
 ## Introduction
 
