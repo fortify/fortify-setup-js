@@ -12,12 +12,11 @@ import { validateUrl, formatError } from './utils.js';
 const CONFIG_DIR = path.join(os.homedir(), '.config', 'fortify', 'setup');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
-// Fixed fcli version that contains the fortify-setup action
-// Only needs to be updated when fcli fortify-setup action is enhanced
+// By default, we use latest fcli v3 version for bootstrapping
 const FCLI_VERSION = 'v3';
 
 /**
- * Get fixed fcli version
+ * Get default fcli version to be bootstrapped
  */
 export function getFcliVersion(): string {
   return FCLI_VERSION;
