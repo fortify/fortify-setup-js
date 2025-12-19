@@ -54,7 +54,7 @@ describe('Actions Integration Tests', () => {
       expect(typeof runFortifyEnv).toBe('function');
       
       // Calling it returns a Promise
-      const result = runFortifyEnv('github', { verbose: false });
+      const result = runFortifyEnv({ args: ['github'], verbose: false });
       expect(result).toBeInstanceOf(Promise);
     });
   });

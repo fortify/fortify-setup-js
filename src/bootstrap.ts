@@ -186,7 +186,7 @@ async function extractArchive(archivePath: string, destDir: string): Promise<voi
  * 
  * The downloaded fcli is stored in an internal cache for use by the env command.
  */
-async function downloadAndInstallFcli(config: BootstrapConfig): Promise<string> {
+async function downloadAndInstallFcli(config: BootstrapConfig): Promise<{ fcliPath: string; wasCached: boolean }> {
   const fcliVersion = getFcliVersionConstant();
   const defaultConfig = getDefaultConfig();
   const downloadUrl = config.fcliUrl || defaultConfig.fcliUrl!;
@@ -201,7 +201,7 @@ async function downloadAndInstallFcli(config: BootstrapConfig): Promise<string> 
   
   // Return existing fcli if already downloaded
   if (fs.existsSync(fcliPath)) {
-    return fcliPath;
+    return { fcliPath, wasCached: true };
   }
   
   // Ensure bootstrap directory exists
@@ -267,7 +267,7 @@ async function downloadAndInstallFcli(config: BootstrapConfig): Promise<string> 
   
   defaultLogger.info(`✓ Fcli bootstrapped to: ${bootstrapDir}`);
   
-  return fcliPath;
+  return { fcliPath, wasCached: false };
 }
 
 /**
@@ -316,13 +316,13 @@ export async function bootstrapFcli(options: BootstrapOptions = {}): Promise<Boo
     };
   }
   
-  // 3. Download fcli (always re-downloads latest v3.x to ensure latest version is used)
-  const fcliPath = await downloadAndInstallFcli(config);
+  // 3. Check cache or download fcli
+  const { fcliPath, wasCached } = await downloadAndInstallFcli(config);
   const version = await getFcliVersion(fcliPath) || getFcliVersionConstant();
   
   return {
     fcliPath,
     version,
-    source: BootstrapSource.DOWNLOAD
+    source: wasCached ? BootstrapSource.CACHED : BootstrapSource.DOWNLOAD
   };
 }

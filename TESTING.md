@@ -45,12 +45,13 @@ Integration tests verify module interactions without full mocking:
 ### End-to-End Tests (`src/__tests__/e2e.test.ts`)
 E2E tests download real fcli and test complete workflows:
 
-- **Skipped by default** via `SKIP_E2E=1` (included in `npm test`)
-- Downloads actual fcli from GitHub releases
-- Tests signature verification
-- Tests cache management
-- Tests error scenarios (invalid URLs, bad signatures)
-- Run explicitly with `npm run test:e2e`
+- **Run in CI** on all platforms (Linux/Windows/macOS)
+- Downloads actual fcli from GitHub releases (~10MB)
+- Tests bootstrap flow (download, caching, signature verification)
+- Tests action execution (fcli tool env commands)
+- Tests cache management (info, clear, refresh)
+- Tests error scenarios (signature verification failures)
+- Run explicitly with `npm run test:e2e` (skipped by default in `npm test`)
 
 ## Coverage
 
@@ -137,14 +138,14 @@ All tests must pass on all platforms before release.
 
 ## Test Statistics
 
-- **Total tests:** ~75+ across all test files
+- **Total tests:** 81 across all test files
 - **Unit tests:** 58 tests (100% coverage for utils/config/logger)
-- **Integration tests:** ~10 tests (platform detection, env vars, cache)
-- **E2E tests:** 14 tests (real fcli download, bootstrap, actions)
+- **Integration tests:** 11 tests (platform detection, env vars, cache management, actions API)
+- **E2E tests:** 12 tests (real fcli download, bootstrap, caching, actions, error handling)
 - **Execution time:**
   - Unit: <1 second
-  - Integration: ~1-2 seconds
-  - E2E: 30-60 seconds (downloads ~10MB fcli binary)
+  - Integration: ~1 second (with E2E skipped)
+  - E2E: 13-16 seconds (downloads ~10MB fcli binary multiple times for cache tests)
 
 ## Future Improvements
 
