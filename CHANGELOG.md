@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0](https://github.com/fortify/fortify-setup-js/compare/v0.0.18...v1.0.0) (2025-12-19)
+
+
+### Features
+
+* Initial v1 release ([10b08ba](https://github.com/fortify/fortify-setup-js/commit/10b08ba7201e46fb6a4cb2d904b2512307dd9403))
+
 ## [0.0.18](https://github.com/fortify/fortify-setup-js/compare/v0.0.17...v0.0.18) (2025-12-19)
 
 
