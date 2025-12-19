@@ -30,7 +30,7 @@ export function parseCliArgument(
   const arg = args[currentIndex];
   
   if (arg.includes('=')) {
-    const value = arg.split('=')[1];
+    const value = arg.substring(arg.indexOf('=') + 1);
     if (!value) {
       throw new Error(`${optionName} requires a value`);
     }
