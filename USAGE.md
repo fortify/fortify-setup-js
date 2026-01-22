@@ -158,6 +158,9 @@ Configures how fcli is bootstrapped. Settings are saved to `~/.config/fortify/se
 
 **Options:**
 - `--help|-h` - Show this help information
+- `--cache-dir=<path>` - Custom cache directory for bootstrapped fcli
+  - Default: `~/.fortify/fcli/bootstrap` (Linux/Mac) or `%USERPROFILE%\.fortify\fcli\bootstrap` (Windows)
+  - **Recommended for CI/CD**: Use job-specific temp directory (see Bootstrap Behavior section)
 - `--fcli-url=<url>` - Full URL to fcli archive (platform-specific)
   - Example: `https://github.com/fortify/fcli/releases/download/v3/fcli-linux.tgz`
 - `--fcli-rsa-sha256-url=<url>` - Full URL to RSA SHA256 signature file
@@ -169,6 +172,7 @@ Configures how fcli is bootstrapped. Settings are saved to `~/.config/fortify/se
 - `--reset` - Reset configuration to defaults
 
 **Environment variables** (override config file):
+- `FCLI_CACHE_DIR` - Override cache directory
 - `FCLI_URL` - Override fcli archive download URL
 - `FCLI_RSA_SHA256_URL` - Override RSA SHA256 signature file URL
 - `FCLI_PATH` - Override fcli binary path (must be 3.14.0+)
@@ -212,9 +216,27 @@ npx @fortify/setup config
 3. **Cached download** - Previously downloaded fcli in internal cache
 4. **Download latest v3.x** - If none of the above are available
 
-**Internal cache location:**
-- Linux/Mac: `/tmp/fortify/fcli/`
-- Windows: `%LOCALAPPDATA%\fortify\fcli-temp\`
+**Default cache location:**
+- Linux/Mac: `~/.fortify/fcli/bootstrap/`
+- Windows: `%USERPROFILE%\.fortify\fcli\bootstrap\`
+
+**Configurable cache directory:**
+
+The cache directory can be customized for CI/CD environments or to control cache lifetime:
+
+- **Config file**: Set `cacheDir` in config file
+- **Environment variable**: `FCLI_CACHE_DIR=/path/to/cache`
+- **Programmatic API**: Pass `config: { cacheDir: '/path' }` to `runFortifyEnv()`
+
+**Recommended CI cache directories** (job-specific, cleaned between runs):
+
+| CI System | Environment Variable | Recommended Cache Dir |
+|-----------|---------------------|----------------------|
+| GitHub Actions | `RUNNER_TEMP` | `$RUNNER_TEMP/.fortify/fcli/bootstrap` |
+| GitLab CI | `CI_PROJECT_DIR` | `$CI_PROJECT_DIR/.fortify-cache/fcli/bootstrap` |
+| Azure DevOps | `AGENT_TEMPDIRECTORY` | `$AGENT_TEMPDIRECTORY/.fortify/fcli/bootstrap` |
+| Bitbucket | `BITBUCKET_CLONE_DIR` | `$BITBUCKET_CLONE_DIR/.fortify-cache/fcli/bootstrap` |
+| Jenkins | `WORKSPACE` | `$WORKSPACE/.fortify-cache/fcli/bootstrap` |
 
 ## Configuration File
 
@@ -228,11 +250,20 @@ Configuration is saved to `~/.config/fortify/setup/config.json`:
 }
 ```
 
-Or with pre-installed fcli:
+With pre-installed fcli:
 
 ```json
 {
   "fcliPath": "/usr/local/bin/fcli",
+  "verifySignature": true
+}
+```
+
+With custom cache directory (for CI/CD):
+
+```json
+{
+  "cacheDir": "/tmp/.fortify/fcli/bootstrap",
   "verifySignature": true
 }
 ```
@@ -404,18 +435,28 @@ console.log(`Verify signature: ${config.verifySignature}`);
 ```typescript
 import { runFortifyEnv } from '@fortify/setup';
 
+// Create reusable bootstrap configuration
+const bootstrapConfig = {
+  cacheDir: process.env.CI_TEMP_DIR 
+    ? `${process.env.CI_TEMP_DIR}/.fortify/fcli/bootstrap`
+    : undefined,  // Defaults to ~/.fortify/fcli/bootstrap
+  fcliUrl: process.env.FCLI_URL  // Optional: use custom URL for testing
+};
+
 // Initialize tools
 const initResult = await runFortifyEnv({
   args: ['init', '--tools=fcli:auto,sc-client:24.4'],
-  verbose: true
+  verbose: true,
+  config: bootstrapConfig
 });
 
 console.log(`Exit code: ${initResult.exitCode}`);
 console.log(`Fcli path: ${initResult.bootstrap.fcliPath}`);
 
-// Generate environment variables
+// Generate environment variables (reusing same config)
 const envResult = await runFortifyEnv({
-  args: ['shell']
+  args: ['shell'],
+  config: bootstrapConfig
 });
 
 console.log(envResult.output); // Environment variable definitions
