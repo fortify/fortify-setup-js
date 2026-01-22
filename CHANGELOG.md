@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/fortify/fortify-setup-js/compare/v1.0.1...v1.0.2) (2026-01-22)
+
+
+### Bug Fixes
+
+* Fix & improve documentation ([5aff994](https://github.com/fortify/fortify-setup-js/commit/5aff994e90d729ef976418fa7bd2e6d3196e6122))
+
 ## [1.0.1](https://github.com/fortify/fortify-setup-js/compare/v1.0.0...v1.0.1) (2026-01-22)
 
 
