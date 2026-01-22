@@ -60,16 +60,18 @@ USAGE
 
 OPTIONS
   --help|-h                   Show this help information
-  --fcli-url=<url>              Full URL to fcli archive (platform-specific)
+  --cache-dir=<path>          Custom cache directory for bootstrapped fcli
+                                Default: ~/.fortify/fcli/bootstrap
+  --fcli-url=<url>            Full URL to fcli archive (platform-specific)
                                 Example: https://github.com/fortify/fcli/releases/download/v3/fcli-linux.tgz
-  --fcli-rsa-sha256-url=<url>   Full URL to RSA SHA256 signature file
+  --fcli-rsa-sha256-url=<url> Full URL to RSA SHA256 signature file
                                 Default: <fcli-url>.rsa_sha256
-  --fcli-path=<path>            Use pre-installed fcli binary (skip download)
-                             Must be fcli 3.14.0+
-  --verify-signature         Verify RSA signatures on downloads (default)
-  --no-verify-signature      Skip signature verification (not recommended)
-  --reset                    Reset configuration to defaults
-  --show                     Display current configuration and exit
+  --fcli-path=<path>          Use pre-installed fcli binary (skip download)
+                                Must be fcli 3.14.0+
+  --verify-signature          Verify RSA signatures on downloads (default)
+  --no-verify-signature       Skip signature verification (not recommended)
+  --reset                     Reset configuration to defaults
+  --show                      Display current configuration and exit
 
 OPTION RESET BEHAVIOR
   Specifying any option on the config command resets all other mutually-exclusive
@@ -78,6 +80,7 @@ OPTION RESET BEHAVIOR
   is active at a time.
 
 ENVIRONMENT VARIABLES
+  FCLI_CACHE_DIR             Override cache directory
   FCLI_URL                   Override fcli archive download URL
   FCLI_RSA_SHA256_URL        Override RSA SHA256 signature file URL
   FCLI_PATH                  Override fcli binary path (must be 3.14.0+)
@@ -86,6 +89,9 @@ ENVIRONMENT VARIABLES
 Environment variables override config file settings.
 
 EXAMPLES
+  # Use job-specific cache directory (CI/CD)
+  npx @fortify/setup config --cache-dir=$RUNNER_TEMP/.fortify/fcli/bootstrap
+  
   # Use pre-installed fcli (skip downloads)
   npx @fortify/setup config --fcli-path=/usr/local/bin/fcli
   
@@ -195,8 +201,16 @@ EXAMPLES
  * Display current configuration
  */
 function displayConfig(config: BootstrapConfig): void {
-  console.log('Current configuration:');
-  if (config.fcliPath) {
+  console.log('Current configuration:');  
+  if (config.cacheDir) {
+    console.log(`  cache-dir: ${config.cacheDir}`);
+  } else {
+    const defaultDir = os.platform() === 'win32'
+      ? path.join(os.homedir(), '.fortify', 'fcli', 'bootstrap')
+      : path.join(os.homedir(), '.fortify', 'fcli', 'bootstrap');
+    console.log(`  cache-dir: ${defaultDir} (default)`);
+  }
+    if (config.fcliPath) {
     console.log(`  fcli-path: ${config.fcliPath}`);
   } else {
     console.log(`  fcli-url:            ${config.fcliUrl}`);
@@ -214,6 +228,7 @@ function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>,
   let reset = false;
   let show = false;
   const validOptions = [
+    '--cache-dir',
     '--fcli-url',
     '--fcli-path',
     '--verify-signature',
@@ -234,8 +249,12 @@ function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>,
       throw new Error(`Unknown option: ${arg}`);
     }
     
-    // Parse --fcli-url or --fcli-url=<value>
-    if (arg.startsWith('--fcli-url')) {
+    // Parse options
+    if (arg.startsWith('--cache-dir')) {
+      const [value, newIndex] = parseCliArgument(args, i, '--cache-dir');
+      config.cacheDir = value;
+      i = newIndex;
+    } else if (arg.startsWith('--fcli-url')) {
       const [value, newIndex] = parseCliArgument(args, i, '--fcli-url');
       config.fcliUrl = value;
       i = newIndex;

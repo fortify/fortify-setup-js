@@ -99,6 +99,10 @@ export function getEffectiveConfig(options: BootstrapOptions = {}): BootstrapCon
   // Environment variable overrides
   const envOverrides: Partial<BootstrapConfig> = {};
   
+  if (process.env.FCLI_CACHE_DIR) {
+    envOverrides.cacheDir = process.env.FCLI_CACHE_DIR;
+  }
+  
   if (process.env.FCLI_URL) {
     envOverrides.fcliUrl = process.env.FCLI_URL;
   }
@@ -119,6 +123,7 @@ export function getEffectiveConfig(options: BootstrapOptions = {}): BootstrapCon
   const finalConfig: BootstrapConfig = {
     ...fileConfig,
     ...envOverrides,
+    ...(options.cacheDir && { cacheDir: options.cacheDir }),
     ...(options.fcliUrl && { fcliUrl: options.fcliUrl }),
     ...(options.fcliRsaSha256Url && { fcliRsaSha256Url: options.fcliRsaSha256Url }),
     ...(options.verifySignature !== undefined && { verifySignature: options.verifySignature }),
@@ -137,17 +142,24 @@ export function getEffectiveConfig(options: BootstrapOptions = {}): BootstrapCon
 }
 
 /**
- * Get bootstrap directory for downloaded fcli (fixed location in user's home)
+ * Get bootstrap directory for downloaded fcli
+ * @param config Optional bootstrap configuration to use custom cache directory
+ * @returns Cache directory path (default: ~/.fortify/fcli/bootstrap)
  */
-export function getTempDir(): string {
+export function getTempDir(config?: BootstrapConfig): string {
+  if (config?.cacheDir) {
+    return config.cacheDir;
+  }
   return path.join(os.homedir(), '.fortify', 'fcli', 'bootstrap');
 }
 
 /**
  * Get full path to bootstrapped fcli binary
+ * @param config Optional bootstrap configuration to use custom cache directory
+ * @returns Path to fcli binary
  */
-export function getBootstrapBinPath(): string {
-  return path.join(getTempDir(), 'bin', os.platform() === 'win32' ? 'fcli.exe' : 'fcli');
+export function getBootstrapBinPath(config?: BootstrapConfig): string {
+  return path.join(getTempDir(config), 'bin', os.platform() === 'win32' ? 'fcli.exe' : 'fcli');
 }
 
 

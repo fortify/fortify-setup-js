@@ -191,9 +191,9 @@ async function downloadAndInstallFcli(config: BootstrapConfig): Promise<{ fcliPa
   const defaultConfig = getDefaultConfig();
   const downloadUrl = config.fcliUrl || defaultConfig.fcliUrl!;
   const archiveName = getFcliArchiveName();
-  const bootstrapDir = getTempDir();
+  const bootstrapDir = getTempDir(config);
   
-  // Bootstrap directory structure: <home>/.fortify/fcli/bootstrap/
+  // Bootstrap directory structure: <configured-cache-dir> or <home>/.fortify/fcli/bootstrap/
   const archivePath = path.join(bootstrapDir, archiveName);
   const extractDir = path.join(bootstrapDir, 'bin');
   const fcliPath = path.join(extractDir, getFcliBinaryName());
@@ -273,9 +273,11 @@ async function downloadAndInstallFcli(config: BootstrapConfig): Promise<{ fcliPa
 /**
  * Get last downloaded fcli path (for env command after run has been executed)
  * This retrieves the fcli from the bootstrap directory.
+ * @param config Optional bootstrap configuration to use custom cache directory
+ * @returns Path to cached fcli or null if not found
  */
 export function getLastDownloadedFcliPath(config?: BootstrapConfig): string | null {
-  const bootstrapDir = getTempDir();
+  const bootstrapDir = getTempDir(config);
   const fcliPath = path.join(bootstrapDir, 'bin', getFcliBinaryName());
   
   return fs.existsSync(fcliPath) ? fcliPath : null;

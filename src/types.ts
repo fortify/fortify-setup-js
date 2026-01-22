@@ -23,6 +23,9 @@
  * Bootstrap configuration options
  */
 export interface BootstrapConfig {
+  /** Cache directory for bootstrapped fcli (default: ~/.fortify/fcli/bootstrap) */
+  cacheDir?: string;
+  
   /** Full download URL for fcli archive (default: derived from GitHub releases) */
   fcliUrl?: string;
   
@@ -40,6 +43,9 @@ export interface BootstrapConfig {
  * Bootstrap options for runtime (merges config + env + CLI args)
  */
 export interface BootstrapOptions {
+  /** Override cache directory for bootstrapped fcli */
+  cacheDir?: string;
+  
   /** Override fcli download URL */
   fcliUrl?: string;
   

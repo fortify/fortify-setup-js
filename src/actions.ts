@@ -17,12 +17,15 @@ import * as os from 'os';
 /**
  * Options for running actions
  */
-export interface RunActionOptions extends BootstrapOptions {
+export interface RunActionOptions {
   /** Action arguments to pass to fcli */
   args?: string[];
   
   /** Whether to show bootstrap messages (default: false for clean output) */
   verbose?: boolean;
+  
+  /** Bootstrap configuration (cacheDir, fcliUrl, verifySignature, etc.) */
+  config?: BootstrapOptions;
 }
 
 /**
@@ -47,31 +50,42 @@ export interface RunActionResult {
  * 
  * Automatically bootstraps fcli if not available in cache or via config.
  * 
- * @param options - Bootstrap and action options
+ * @param options - Action and bootstrap options
  * @returns Promise with bootstrap and execution results
  * 
  * @example
  * ```typescript
  * import { runFortifyEnv } from '@fortify/setup';
  * 
+ * // Create reusable bootstrap config
+ * const config = {
+ *   cacheDir: '/tmp/fortify/fcli',
+ *   fcliUrl: process.env.FCLI_URL
+ * };
+ * 
  * // Initialize tools
  * await runFortifyEnv({
  *   args: ['init', '--tools=sc-client'],
- *   verbose: true
+ *   verbose: true,
+ *   config
  * });
  * 
- * // Generate environment variables
+ * // Generate environment variables (reusing same config)
  * await runFortifyEnv({
- *   args: ['shell']
+ *   args: ['shell'],
+ *   config
  * });
  * ```
  */
 export async function runFortifyEnv(options: RunActionOptions = {}): Promise<RunActionResult> {
-  const { args = [], verbose = false, ...bootstrapOptions } = options;
+  const { args = [], verbose = false, config: bootstrapOptions } = options;
   const logger = createLogger(verbose);
   
+  // Get effective config for cache directory resolution
+  const effectiveConfig = getEffectiveConfig(bootstrapOptions);
+  
   // Check if fcli is available, bootstrap if needed
-  let fcliPath = getFcliPathForEnv();
+  let fcliPath = getFcliPathForEnv(bootstrapOptions);
   let bootstrap: BootstrapResult;
   
   if (!fcliPath) {
@@ -85,7 +99,7 @@ export async function runFortifyEnv(options: RunActionOptions = {}): Promise<Run
   } else {
     // Use existing fcli
     const version = await getFcliVersion(fcliPath) || 'unknown';
-    const source = getLastDownloadedFcliPath() ? BootstrapSource.CACHED : BootstrapSource.PREINSTALLED;
+    const source = getLastDownloadedFcliPath(effectiveConfig) ? BootstrapSource.CACHED : BootstrapSource.PREINSTALLED;
     bootstrap = {
       fcliPath,
       version,
@@ -216,11 +230,12 @@ export async function manageFcliCache(action: string, logger = createLogger(fals
  * Get fcli path without bootstrapping (for env command)
  * Checks configured/pre-installed fcli first, then cached fcli
  * 
+ * @param options Optional bootstrap options for cache directory resolution
  * @returns fcli path or null if not available
  */
-export function getFcliPathForEnv(): string | null {
+export function getFcliPathForEnv(options?: BootstrapOptions): string | null {
   // Try configured path first
-  const config = getEffectiveConfig();
+  const config = getEffectiveConfig(options);
   if (config.fcliPath) {
     return config.fcliPath;
   }
@@ -231,6 +246,6 @@ export function getFcliPathForEnv(): string | null {
     return envPath;
   }
   
-  // Try cached fcli last
-  return getLastDownloadedFcliPath();
+  // Try cached fcli last (using configured cache directory if provided)
+  return getLastDownloadedFcliPath(config);
 }
