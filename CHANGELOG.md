@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.1](https://github.com/fortify/fortify-setup-js/compare/v1.0.0...v1.0.1) (2026-01-22)
+
+
+### Bug Fixes
+
+* Configurable cache directory for bootstrapped fcli, to avoid outdated versions being used on CI systems ([11472b0](https://github.com/fortify/fortify-setup-js/commit/11472b00a846d525562cd3438ab585de2691a3bc))
+* Update dependencies ([4fdffcb](https://github.com/fortify/fortify-setup-js/commit/4fdffcbde9b34795710a090fba99718a7133c464))
+
 ## [1.0.0](https://github.com/fortify/fortify-setup-js/compare/v0.0.18...v1.0.0) (2025-12-19)
 
 
