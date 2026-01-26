@@ -371,7 +371,7 @@ await runFortifyEnv({
 ## Related Projects
 
 - **[fcli](https://github.com/fortify/fcli)** - Fortify CLI (what this package bootstraps)
-- **[fcli tool env commands](https://fortify.github.io/fcli/v3/manpage/fcli-tool-env.html** - The fcli commands that @fortify/setup wraps
+- **[fcli tool env commands](https://fortify.github.io/fcli/v3/manpage/fcli-tool-env.html)** - The fcli commands that @fortify/setup wraps
 
 <!-- END-INCLUDE:repo-usage.md -->
 
