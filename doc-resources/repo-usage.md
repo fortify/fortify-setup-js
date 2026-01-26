@@ -87,8 +87,8 @@ Depending on the bootstrapped fcli version, the list of available `env` subcomma
 - `expr` - Evaluate custom template expressions
 
 **Options:**
-- `--help|-h` - Show this help information
-- `--fcli-help` - Show fcli tool env help
+- `--help|-h` - Show `@fortify/setup env` help
+- `--fcli-help` - Show `fcli tool env` help
 
 **Common init options:**
 - `--tools=<tool1>[:<version>],<tool2>[:<version>],...` - Tools to initialize
@@ -140,7 +140,7 @@ npx @fortify/setup bootstrap-config [options]
 Configures how fcli is bootstrapped. Settings are saved to `~/.config/fortify/setup/config.json`.
 
 **Options:**
-- `--help|-h` - Show this help information
+- `--help|-h` - Show `@fortify/setup bootstrap-config` help
 - `--cache-dir=<path>` - Custom cache directory for bootstrapped fcli
   - Default: `~/.fortify/fcli/bootstrap` (Linux/Mac) or `%USERPROFILE%\.fortify\fcli\bootstrap` (Windows)
   - **Recommended for CI/CD**: Use job-specific temp directory (see Bootstrap Behavior section)
@@ -200,18 +200,17 @@ npx @fortify/setup bootstrap-config
 **fcli resolution order:**
 
 1. **Configured path** - Via config file or `FCLI_BOOTSTRAP_PATH` env var (must be fcli 3.14.0+)
-2. **Cached download** - Previously downloaded fcli in internal cache
-3. **Download latest v3.x** - If none of the above are available
+2. **Cached download** - Previously downloaded fcli in bootstrap cache
+3. **Download from configured URL** - If none of the above are available
 
-**Default cache location:**
+**Default bootstrap cache location:**
 - Linux/Mac: `~/.fortify/fcli/bootstrap/`
 - Windows: `%USERPROFILE%\.fortify\fcli\bootstrap\`
 
-**Configurable cache directory:**
+**Configurable bootstrap cache directory:**
 
-The cache directory can be customized for CI/CD environments or to control cache lifetime:
+The bootstrap cache directory can be customized for CI/CD environments or to control cache lifetime:
 
-- **Config file**: Set `cacheDir` in config file
 - **Environment variable**: `FCLI_BOOTSTRAP_CACHE_DIR=/path/to/cache`
 - **Programmatic API**: Pass `config: { cacheDir: '/path' }` to `runFortifyEnv()`
 
@@ -235,7 +234,7 @@ Configuration is saved to `~/.config/fortify/setup/config.json`:
 
 By default, `@fortify/setup` verifies RSA SHA256 signatures on downloaded fcli archives using Fortify's public key. This ensures the binary hasn't been tampered with.
 
-**To disable** (not recommended):
+**To disable** (not recommended unless when downloading from trusted URLs):
 
 ```bash
 npx @fortify/setup bootstrap-config --no-verify-signature
@@ -295,7 +294,7 @@ npx @fortify/setup env shell
 
 ### CI/CD downloading fcli on every run
 
-This is as designed; to ensure we always use the latest fcli v3 version by default, most Fortify-provided CI integrations set `FCLI_BOOTSTRAP_CACHE_DIR` to a job-specific (temp) directory that gets cleared after each job. To avoid:
+This is as designed; to ensure the latest fcli v3 version is used by default, most Fortify-provided CI integrations set `FCLI_BOOTSTRAP_CACHE_DIR` to a job-specific (temp) directory that gets cleared after each job. To avoid:
 
 - Pre-install fcli and use either the `bootstrap-config --fcli-path` option or set the `FCLI_BOOTSTRAP_PATH` environment variable
 - Some CI integrations may install the bootstrapped fcli to a tool cache if `FCLI_BOOTSTRAP_VERSION` is set to a specific `<major>.<minor>.<patch>` version, allowing a bootstrapped fcli version to be re-used across job runs.
@@ -319,7 +318,7 @@ For Node.js/TypeScript projects that need to integrate Fortify tooling programma
 
 ```bash
 # Install as project dependency (also see "Version Pinning" section)
-npm install --save-dev @fortify/setup@^2.0.0
+npm install --save-dev @fortify/setup@^2.1.0
 ```
 
 ### API Usage

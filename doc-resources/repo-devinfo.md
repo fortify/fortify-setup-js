@@ -84,7 +84,7 @@ src/
 - Bootstrap latest fcli v3.x by default to benefit from latest features & bug fixes
 - Version pinning support via `FCLI_BOOTSTRAP_VERSION` (accepts with or without 'v' prefix)
 - Minimal runtime dependencies (undici, tar, unzipper)
-- Three-tier configuration: file → env vars → runtime options
+- Two-tier configuration: env vars → runtime options
 - Intelligent caching with support for persistent tool cache (GitHub Actions)
 - RSA signature verification by default
 - Wraps `fcli tool env` commands for unified tool management
