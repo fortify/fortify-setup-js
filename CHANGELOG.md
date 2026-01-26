@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/fortify/fortify-setup-js/compare/v1.0.2...v2.0.0) (2026-01-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* Rename commands & env vars for clarity/consistency
+
+### Features
+
+* Rename commands & env vars for clarity/consistency ([d787d40](https://github.com/fortify/fortify-setup-js/commit/d787d402ede8a248036c865a19d66ddb1e58ca6a))
+
 ## [1.0.2](https://github.com/fortify/fortify-setup-js/compare/v1.0.1...v1.0.2) (2026-01-22)
 
 
