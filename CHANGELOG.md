@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.1.0](https://github.com/fortify/fortify-setup-js/compare/v2.0.0...v2.1.0) (2026-01-26)
+
+
+### Features
+
+* Add support for `bootstrap-config --fcli-version` option ([de5418f](https://github.com/fortify/fortify-setup-js/commit/de5418fb1e1ad74b1f3b90e6934d5419c7a03af8))
+* Add support for `FCLI_BOOTSTRAP_VERSION` environment variable ([de5418f](https://github.com/fortify/fortify-setup-js/commit/de5418fb1e1ad74b1f3b90e6934d5419c7a03af8))
+* Fix and improve documentation ([de5418f](https://github.com/fortify/fortify-setup-js/commit/de5418fb1e1ad74b1f3b90e6934d5419c7a03af8))
+
 ## [2.0.0](https://github.com/fortify/fortify-setup-js/compare/v1.0.2...v2.0.0) (2026-01-26)
 
 
