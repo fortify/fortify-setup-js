@@ -53,6 +53,63 @@ describeE2E('End-to-End Tests', () => {
       expect(result.source).toBe('cached');
       expect(fs.existsSync(result.fcliPath)).toBe(true);
     });
+
+    it('should bootstrap specific version via environment variable', async () => {
+      // Clear cache to force fresh download
+      await manageFcliCache('clear');
+      
+      // Set environment variable for specific version
+      const originalEnv = process.env.FCLI_BOOTSTRAP_VERSION;
+      process.env.FCLI_BOOTSTRAP_VERSION = 'v3.14.1';
+      
+      try {
+        const result = await bootstrapFcli();
+        
+        expect(result).toBeDefined();
+        expect(result.fcliPath).toBeDefined();
+        expect(fs.existsSync(result.fcliPath)).toBe(true);
+        expect(result.version).toMatch(/^v?3\.14\.1/);
+        expect(result.source).toBe('download');
+      } finally {
+        // Restore original env
+        if (originalEnv) {
+          process.env.FCLI_BOOTSTRAP_VERSION = originalEnv;
+        } else {
+          delete process.env.FCLI_BOOTSTRAP_VERSION;
+        }
+      }
+    }, 60000);
+
+    it('should prioritize FCLI_BOOTSTRAP_URL over FCLI_BOOTSTRAP_VERSION', async () => {
+      await manageFcliCache('clear');
+      
+      const originalVersion = process.env.FCLI_BOOTSTRAP_VERSION;
+      const originalUrl = process.env.FCLI_BOOTSTRAP_URL;
+      
+      process.env.FCLI_BOOTSTRAP_VERSION = 'v3.14.0';
+      process.env.FCLI_BOOTSTRAP_URL = 'https://github.com/fortify/fcli/releases/download/v3/fcli-linux.tgz';
+      
+      try {
+        const result = await bootstrapFcli();
+        
+        expect(result).toBeDefined();
+        expect(result.fcliPath).toBeDefined();
+        expect(fs.existsSync(result.fcliPath)).toBe(true);
+        // Should use latest v3, not v3.14.0, because URL takes precedence
+        expect(result.version).toMatch(/^v3\./);
+      } finally {
+        if (originalVersion) {
+          process.env.FCLI_BOOTSTRAP_VERSION = originalVersion;
+        } else {
+          delete process.env.FCLI_BOOTSTRAP_VERSION;
+        }
+        if (originalUrl) {
+          process.env.FCLI_BOOTSTRAP_URL = originalUrl;
+        } else {
+          delete process.env.FCLI_BOOTSTRAP_URL;
+        }
+      }
+    }, 60000);
   });
 
   describe('Action Execution', () => {

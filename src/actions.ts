@@ -4,7 +4,7 @@
  */
 
 import { execSync } from 'child_process';
-import { bootstrapFcli, getLastDownloadedFcliPath, getFcliVersion, getFcliPathFromEnv } from './bootstrap.js';
+import { bootstrapFcli, getLastDownloadedFcliPath, getFcliVersion } from './bootstrap.js';
 import { getEffectiveConfig } from './config.js';
 import type { BootstrapOptions, BootstrapResult } from './types.js';
 import { BootstrapSource } from './types.js';
@@ -228,7 +228,7 @@ export async function manageFcliCache(action: string, logger = createLogger(fals
 
 /**
  * Get fcli path without bootstrapping (for env command)
- * Checks configured/pre-installed fcli first, then cached fcli
+ * Checks configured fcli first, then cached fcli
  * 
  * @param options Optional bootstrap options for cache directory resolution
  * @returns fcli path or null if not available
@@ -240,12 +240,6 @@ export function getFcliPathForEnv(options?: BootstrapOptions): string | null {
     return config.fcliPath;
   }
   
-  // Check FCLI-specific environment variables
-  const envPath = getFcliPathFromEnv();
-  if (envPath) {
-    return envPath;
-  }
-  
-  // Try cached fcli last (using configured cache directory if provided)
+  // Try cached fcli (using configured cache directory if provided)
   return getLastDownloadedFcliPath(config);
 }

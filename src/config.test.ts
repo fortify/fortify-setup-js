@@ -260,6 +260,50 @@ describe('getEffectiveConfig', () => {
     expect(config.fcliRsaSha256Url).toBe('https://example.com/signature');
   });
 
+  it('should build URL from FCLI_BOOTSTRAP_VERSION environment variable', () => {
+    process.env.FCLI_BOOTSTRAP_VERSION = 'v3.6.1';
+    
+    const config = getEffectiveConfig();
+    
+    expect(config.fcliUrl).toBe('https://github.com/fortify/fcli/releases/download/v3.6.1/fcli-linux.tgz');
+  });
+
+  it('should normalize version without v prefix in FCLI_BOOTSTRAP_VERSION', () => {
+    process.env.FCLI_BOOTSTRAP_VERSION = '3.14.1';
+    
+    const config = getEffectiveConfig();
+    
+    expect(config.fcliUrl).toBe('https://github.com/fortify/fcli/releases/download/v3.14.1/fcli-linux.tgz');
+  });
+
+  it('should prioritize FCLI_BOOTSTRAP_URL over FCLI_BOOTSTRAP_VERSION', () => {
+    process.env.FCLI_BOOTSTRAP_VERSION = 'v3.6.1';
+    process.env.FCLI_BOOTSTRAP_URL = 'https://custom.url/fcli.tgz';
+    
+    const config = getEffectiveConfig();
+    
+    expect(config.fcliUrl).toBe('https://custom.url/fcli.tgz');
+  });
+
+  it('should build different platform URLs from FCLI_BOOTSTRAP_VERSION', () => {
+    process.env.FCLI_BOOTSTRAP_VERSION = 'v3.5.0';
+    
+    // Test Windows
+    vi.mocked(os.platform).mockReturnValue('win32');
+    let config = getEffectiveConfig();
+    expect(config.fcliUrl).toBe('https://github.com/fortify/fcli/releases/download/v3.5.0/fcli-windows.zip');
+    
+    // Test macOS
+    vi.mocked(os.platform).mockReturnValue('darwin');
+    config = getEffectiveConfig();
+    expect(config.fcliUrl).toBe('https://github.com/fortify/fcli/releases/download/v3.5.0/fcli-mac.tgz');
+    
+    // Test Linux
+    vi.mocked(os.platform).mockReturnValue('linux');
+    config = getEffectiveConfig();
+    expect(config.fcliUrl).toBe('https://github.com/fortify/fcli/releases/download/v3.5.0/fcli-linux.tgz');
+  });
+
   it('should throw error for invalid fcliUrl', () => {
     expect(() => getEffectiveConfig({ fcliUrl: 'not-a-url' })).toThrow('Invalid fcli-url');
   });

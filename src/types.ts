@@ -46,6 +46,9 @@ export interface BootstrapOptions {
   /** Override cache directory for bootstrapped fcli */
   cacheDir?: string;
   
+  /** Override fcli version (ignored if fcliUrl is specified) */
+  fcliVersion?: string;
+  
   /** Override fcli download URL */
   fcliUrl?: string;
   

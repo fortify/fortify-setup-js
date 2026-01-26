@@ -3,7 +3,7 @@
  * Export public interfaces for programmatic use
  */
 
-export { bootstrapFcli, getLastDownloadedFcliPath, getFcliVersion, getFcliPathFromEnv, getFcliBinaryName } from './bootstrap.js';
+export { bootstrapFcli, getLastDownloadedFcliPath, getFcliVersion, getFcliBinaryName } from './bootstrap.js';
 export { loadConfig, saveConfig, getDefaultConfig, getEffectiveConfig } from './config.js';
 export { runFortifyEnv, getFcliPathForEnv, manageFcliCache } from './actions.js';
 export { createLogger, defaultLogger } from './logger.js';

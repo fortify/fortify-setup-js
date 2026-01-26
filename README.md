@@ -22,7 +22,7 @@ The `@fortify/setup` npm package provides a lightweight utility with minimal dep
 * Multi-platform support (Linux, macOS, Windows)
 * Three-tier configuration (file, environment variables, CLI arguments)
 * CI/CD tool cache integration (GitHub Actions, Azure DevOps, GitLab)
-* Simple command structure: `config`, `cache`, `env`
+* Simple command structure: `bootstrap-config`, `bootstrap-cache`, `env`
 * **TypeScript library API** for building custom integrations
 * **Complete examples** for GitHub Actions, Azure DevOps, and GitLab CI
 
@@ -44,8 +44,8 @@ The `@fortify/setup` npm package provides a lightweight utility with minimal dep
 
 * **Release Notes**: https://github.com/fortify/fortify-setup-js/releases
 * **GitHub Repository**: https://github.com/fortify/fortify-setup-js
-* **Online Documentation**: https://fortify.github.io/fortify-setup-js
-* **Fcli Documentation**: https://github.com/fortify/fcli
+* **Online Documentation**: https://github.com/fortify/fortify-setup-js/blob/main/USAGE.md
+* **Fcli Documentation**: https://fortify.github.io/fcli/v3
 * **Contributing Guidelines**: [CONTRIBUTING.md](CONTRIBUTING.md)
 * **Code of Conduct**: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 * **License**: [LICENSE.txt](LICENSE.txt)

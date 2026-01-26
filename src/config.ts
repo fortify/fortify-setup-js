@@ -23,10 +23,17 @@ export function getFcliVersion(): string {
 }
 
 /**
- * Get default bootstrap configuration
+ * Normalize version to ensure it starts with 'v' prefix
  */
-export function getDefaultConfig(): BootstrapConfig {
-  const fcliVersion = FCLI_VERSION;
+function normalizeVersion(version: string): string {
+  return version.startsWith('v') ? version : `v${version}`;
+}
+
+/**
+ * Build fcli download URL from version
+ */
+function buildFcliUrl(version: string): string {
+  const normalizedVersion = normalizeVersion(version);
   const platform = os.platform();
   let archiveName: string;
   
@@ -38,8 +45,15 @@ export function getDefaultConfig(): BootstrapConfig {
     archiveName = 'fcli-linux.tgz';
   }
   
+  return `https://github.com/fortify/fcli/releases/download/${normalizedVersion}/${archiveName}`;
+}
+
+/**
+ * Get default bootstrap configuration
+ */
+export function getDefaultConfig(): BootstrapConfig {
   return {
-    fcliUrl: `https://github.com/fortify/fcli/releases/download/${fcliVersion}/${archiveName}`,
+    fcliUrl: buildFcliUrl(FCLI_VERSION),
     verifySignature: true
   };
 }
@@ -129,6 +143,14 @@ export function getEffectiveConfig(options: BootstrapOptions = {}): BootstrapCon
     ...(options.verifySignature !== undefined && { verifySignature: options.verifySignature }),
     ...(options.fcliPath && { fcliPath: options.fcliPath })
   };
+  
+  // If FCLI_BOOTSTRAP_VERSION env var is set but URL is NOT explicitly set,
+  // build URL from version (FCLI_BOOTSTRAP_URL takes precedence)
+  const hasExplicitUrl = envOverrides.fcliUrl || options.fcliUrl;
+  const versionEnvVar = process.env.FCLI_BOOTSTRAP_VERSION;
+  if (versionEnvVar && !hasExplicitUrl) {
+    finalConfig.fcliUrl = buildFcliUrl(versionEnvVar);
+  }
   
   // Validate URLs if present
   if (finalConfig.fcliUrl) {

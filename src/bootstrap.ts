@@ -68,25 +68,6 @@ export async function getFcliVersion(fcliPath: string): Promise<string | null> {
   }
 }
 
-/**
- * Resolve fcli path from environment variables
- * Checks FCLI, FCLI_CMD, and FCLI_HOME environment variables
- */
-export function getFcliPathFromEnv(): string | null {
-  const fcliEnv = process.env.FCLI || process.env.FCLI_CMD || process.env.FCLI_HOME;
-  if (!fcliEnv) {
-    return null;
-  }
-  
-  // FCLI_HOME might be a directory, check for binary inside
-  const potentialPath = fs.existsSync(fcliEnv) && fs.statSync(fcliEnv).isDirectory()
-    ? path.join(fcliEnv, 'bin', getFcliBinaryName())
-    : fcliEnv;
-    
-  return fs.existsSync(potentialPath) ? potentialPath : null;
-}
-
-
 
 /**
  * Get proxy agent for HTTP requests based on environment variables
@@ -287,9 +268,9 @@ export function getLastDownloadedFcliPath(config?: BootstrapConfig): string | nu
  * Bootstrap fcli - main entry point
  * 
  * Bootstrap searches for fcli in the following order:
- * 1. Configured path (via config file or FCLI_PATH env var)
- * 2. FCLI-specific environment variables (FCLI, FCLI_CMD, FCLI_HOME)
- * 3. Download latest v3.x (always re-downloads to ensure latest version)
+ * 1. Configured path (via config file or FCLI_BOOTSTRAP_PATH env var)
+ * 2. Cached download (from previous bootstrap)
+ * 3. Download latest v3.x
  */
 export async function bootstrapFcli(options: BootstrapOptions = {}): Promise<BootstrapResult> {
   const config = getEffectiveConfig(options);
@@ -307,18 +288,7 @@ export async function bootstrapFcli(options: BootstrapOptions = {}): Promise<Boo
     };
   }
   
-  // 2. Check FCLI-specific environment variables for pre-installed fcli
-  const envFcliPath = getFcliPathFromEnv();
-  if (envFcliPath) {
-    const version = await getFcliVersion(envFcliPath) || 'unknown';
-    return {
-      fcliPath: envFcliPath,
-      version,
-      source: BootstrapSource.PREINSTALLED
-    };
-  }
-  
-  // 3. Check cache or download fcli
+  // 2. Check cache or download fcli
   const { fcliPath, wasCached } = await downloadAndInstallFcli(config);
   const version = await getFcliVersion(fcliPath) || getFcliVersionConstant();
   

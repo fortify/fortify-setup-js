@@ -4,11 +4,14 @@
 # repo-url
 https://github.com/fortify/fortify-setup-js
 
-# gh-pages-url
-https://fortify.github.io/fortify-setup-js
+# doc-url
+https://github.com/fortify/fortify-setup-js/blob/main/USAGE.md
 
-# fcli-url
+# fcli-repo-url
 https://github.com/fortify/fcli
+
+# fcli-doc-url
+https://fortify.github.io/fcli/v3
 
 # copyright-years
 2025 - {{var:current-year}}

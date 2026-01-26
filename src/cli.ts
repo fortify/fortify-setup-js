@@ -62,8 +62,12 @@ OPTIONS
   --help|-h                   Show this help information
   --cache-dir=<path>          Custom cache directory for bootstrapped fcli
                                 Default: ~/.fortify/fcli/bootstrap
+  --fcli-version=<version>    Fcli version to bootstrap (e.g., v3, v3.6, v3.6.1)
+                                Default: v3 (latest v3.x release)
+                                Ignored if --fcli-url is specified
   --fcli-url=<url>            Full URL to fcli archive (platform-specific)
                                 Example: https://github.com/fortify/fcli/releases/download/v3/fcli-linux.tgz
+                                Takes precedence over --fcli-version
   --fcli-rsa-sha256-url=<url> Full URL to RSA SHA256 signature file
                                 Default: <fcli-url>.rsa_sha256
   --fcli-path=<path>          Use pre-installed fcli binary (skip download)
@@ -81,6 +85,7 @@ OPTION RESET BEHAVIOR
 
 ENVIRONMENT VARIABLES
   FCLI_BOOTSTRAP_CACHE_DIR             Override cache directory
+  FCLI_BOOTSTRAP_VERSION               Override fcli version (ignored if FCLI_BOOTSTRAP_URL set)
   FCLI_BOOTSTRAP_URL                   Override fcli archive download URL
   FCLI_BOOTSTRAP_RSA_SHA256_URL        Override RSA SHA256 signature file URL
   FCLI_BOOTSTRAP_PATH                  Override fcli binary path (must be 3.14.0+)
@@ -146,13 +151,17 @@ function showEnvHelp(): void {
   console.log(`
 Initialize tools and generate environment variables
 
-Provides a unified interface to both 'fcli tool env init' (for tool setup)
-and 'fcli tool env <format>' (for generating environment variables).
+Provides a unified interface to 'fcli tool env' commands for both tool setup
+and environment variable generation. Use --fcli-help to see the complete list
+of available subcommands and their usage for the bootstrapped fcli version.
 
 USAGE
   npx @fortify/setup env <subcommand> [options]
 
-SUBCOMMANDS
+COMMON SUBCOMMANDS
+  Depending on the bootstrapped fcli version, the list of available subcommands
+  may vary. Following are commonly available subcommands:
+  
   init          Initialize/install Fortify tools (fcli tool env init)
   shell         Generate shell environment variables
   github        Generate GitHub Actions environment
@@ -163,13 +172,20 @@ SUBCOMMANDS
 
 OPTIONS
   --help|-h                   Show this help information
-  --fcli-help                 Show fcli tool env help
+  --fcli-help                 Show fcli tool env help for bootstrapped version
 
 BOOTSTRAP BEHAVIOR
   The env command uses cached fcli if present, otherwise bootstraps automatically.
   Cached fcli is created by previous env commands or can be pre-populated.
 
 EXAMPLES
+  # Show complete fcli tool env help (varies by fcli version)
+  npx @fortify/setup env --fcli-help
+  
+  # Show help for specific subcommand
+  npx @fortify/setup env init --fcli-help
+  npx @fortify/setup env shell --fcli-help
+  
   # Initialize tools with specific versions
   npx @fortify/setup env init --tools=fcli:latest,sc-client:24.4
   
@@ -188,13 +204,33 @@ EXAMPLES
   
   # Use in shell (bash/zsh)
   source <(npx @fortify/setup env shell)
-  
-  # Show fcli tool env help
-  npx @fortify/setup env --fcli-help
-  
-  # Show help for specific subcommand
-  npx @fortify/setup env init --help
 `);
+}
+
+/**
+ * Normalize version to ensure it starts with 'v' prefix
+ */
+function normalizeVersion(version: string): string {
+  return version.startsWith('v') ? version : `v${version}`;
+}
+
+/**
+ * Build fcli URL for display purposes (matches config.ts buildFcliUrl logic)
+ */
+function buildFcliUrlForDisplay(version: string): string {
+  const normalizedVersion = normalizeVersion(version);
+  const platform = os.platform();
+  let archiveName: string;
+  
+  if (platform === 'win32') {
+    archiveName = 'fcli-windows.zip';
+  } else if (platform === 'darwin') {
+    archiveName = 'fcli-mac.tgz';
+  } else {
+    archiveName = 'fcli-linux.tgz';
+  }
+  
+  return `https://github.com/fortify/fcli/releases/download/${normalizedVersion}/${archiveName}`;
 }
 
 /**
@@ -213,8 +249,9 @@ function displayConfig(config: BootstrapConfig): void {
     if (config.fcliPath) {
     console.log(`  fcli-path: ${config.fcliPath}`);
   } else {
-    console.log(`  fcli-url:            ${config.fcliUrl}`);
-    const rsaSha256Url = config.fcliRsaSha256Url || `${config.fcliUrl}.rsa_sha256`;
+    const effectiveUrl = config.fcliUrl || buildFcliUrlForDisplay('v3');
+    console.log(`  fcli-url:            ${effectiveUrl}`);
+    const rsaSha256Url = config.fcliRsaSha256Url || `${effectiveUrl}.rsa_sha256`;
     console.log(`  fcli-rsa-sha256-url: ${rsaSha256Url}`);
     console.log(`  verify-signature:    ${config.verifySignature}`);
   }
@@ -229,6 +266,7 @@ function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>,
   let show = false;
   const validOptions = [
     '--cache-dir',
+    '--fcli-version',
     '--fcli-url',
     '--fcli-path',
     '--verify-signature',
@@ -253,6 +291,11 @@ function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>,
     if (arg.startsWith('--cache-dir')) {
       const [value, newIndex] = parseCliArgument(args, i, '--cache-dir');
       config.cacheDir = value;
+      i = newIndex;
+    } else if (arg.startsWith('--fcli-version')) {
+      const [value, newIndex] = parseCliArgument(args, i, '--fcli-version');
+      // Build URL from version immediately (don't save version to config)
+      config.fcliUrl = buildFcliUrlForDisplay(value);
       i = newIndex;
     } else if (arg.startsWith('--fcli-url')) {
       const [value, newIndex] = parseCliArgument(args, i, '--fcli-url');

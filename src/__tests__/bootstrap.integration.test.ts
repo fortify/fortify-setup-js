@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getFcliPathFromEnv, getFcliBinaryName } from '../bootstrap.js';
+import { getFcliBinaryName } from '../bootstrap.js';
 
 describe('Bootstrap Integration Tests', () => {
   const originalEnv = process.env;
@@ -35,23 +35,5 @@ describe('Bootstrap Integration Tests', () => {
       expect(getFcliBinaryName()).toBe('fcli');
     });
   });
-
-  describe('getFcliPathFromEnv', () => {
-    it('should return null or string path', () => {
-      const result = getFcliPathFromEnv();
-      expect(result === null || typeof result === 'string').toBe(true);
-    });
-
-    it('should not throw when called', () => {
-      expect(() => getFcliPathFromEnv()).not.toThrow();
-    });
-
-    it('should return consistent result on multiple calls', () => {
-      const result1 = getFcliPathFromEnv();
-      const result2 = getFcliPathFromEnv();
-      expect(result1).toBe(result2);
-    });
-  });
-
 
 });
