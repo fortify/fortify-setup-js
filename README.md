@@ -13,18 +13,16 @@
 
 ## Introduction
 
-The `@fortify/setup` npm package provides a lightweight utility with minimal dependencies for bootstrapping [fcli](https://github.com/fortify/fcli) and running `fcli tool env` commands for initializing the Fortify tools environment and generating corresponding environment variables in any environment.
+The `@fortify/setup` npm package provides a lightweight utility with minimal dependencies for bootstrapping [fcli](https://github.com/fortify/fcli) and running `fcli tool env` commands for initializing the Fortify tools environment and generating corresponding environment variables.
 
 **Key Features:**
 
 * Bootstrap fcli automatically from GitHub releases or custom URL with signature verification, or use pre-installed fcli version
 * Minimal runtime dependencies (tar, undici, unzipper) for secure archive handling
 * Multi-platform support (Linux, macOS, Windows)
-* Three-tier configuration (file, environment variables, CLI arguments)
-* CI/CD tool cache integration (GitHub Actions, Azure DevOps, GitLab)
+* Two-tier configuration (environment variables, CLI arguments)
 * Simple command structure: `bootstrap-config`, `bootstrap-cache`, `env`
 * **TypeScript library API** for building custom integrations
-* **Complete examples** for GitHub Actions, Azure DevOps, and GitLab CI
 
 **Use Cases:**
 
@@ -44,7 +42,7 @@ The `@fortify/setup` npm package provides a lightweight utility with minimal dep
 
 * **Release Notes**: https://github.com/fortify/fortify-setup-js/releases
 * **GitHub Repository**: https://github.com/fortify/fortify-setup-js
-* **Online Documentation**: https://github.com/fortify/fortify-setup-js/blob/main/USAGE.md
+* **@fortify/setup Documentation**: https://github.com/fortify/fortify-setup-js/blob/main/USAGE.md
 * **Fcli Documentation**: https://fortify.github.io/fcli/v3
 * **Contributing Guidelines**: [CONTRIBUTING.md](CONTRIBUTING.md)
 * **Code of Conduct**: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)

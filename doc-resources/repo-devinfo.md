@@ -7,7 +7,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for information on how to contribute to t
 ```bash
 # Clone repository
 git clone {{var:repo-url}}.git
-cd setup
 
 # Install dependencies
 npm install
@@ -25,14 +24,22 @@ node dist/cli.js --help
 # Clean build
 npm run clean && npm run build
 
-# Test commands
-node dist/cli.js configure --cache-enabled
-node dist/cli.js install --help
-node dist/cli.js install --fcli=latest
+# Run tests
+npm test
+
+# Test CLI commands locally
+node dist/cli.js --help
+node dist/cli.js bootstrap-config --help
+node dist/cli.js env --help
+
+# Test with specific commands
+node dist/cli.js bootstrap-config --fcli-version=3.14.1
+node dist/cli.js env init --tools=fcli:auto,sc-client:auto
 
 # Install globally for testing
 npm link
-fortify-setup install --fcli=latest
+fortify-setup bootstrap-config --fcli-version=v3
+fortify-setup env init --tools=fcli:auto
 ```
 
 ### Release Process
@@ -56,19 +63,31 @@ Releases are automated via [release-please](https://github.com/googleapis/releas
 
 ```
 src/
-├── types.ts       # TypeScript interfaces
-├── config.ts      # Configuration management
-├── bootstrap.ts   # Bootstrap logic (always v3.x)
-├── cli.ts         # CLI entry point
-└── index.ts       # Library exports
+├── types.ts           # TypeScript interfaces
+├── config.ts          # Configuration management
+├── config.test.ts     # Configuration unit tests
+├── bootstrap.ts       # fcli bootstrap logic
+├── actions.ts         # High-level action wrappers
+├── cli.ts             # CLI entry point
+├── logger.ts          # Logging utilities
+├── logger.test.ts     # Logger unit tests
+├── utils.ts           # Utility functions
+├── utils.test.ts      # Utils unit tests
+├── index.ts           # Library exports
+└── __tests__/         # Integration & E2E tests
+    ├── bootstrap.integration.test.ts
+    ├── actions.integration.test.ts
+    └── e2e.test.ts
 ```
 
 **Key Design Principles:**
-- Always bootstrap latest fcli v3.x for consistency
-- Zero runtime dependencies
-- Three-tier configuration (file, env, args)
-- Intelligent caching with CI/CD detection
+- Bootstrap latest fcli v3.x by default to benefit from latest features & bug fixes
+- Version pinning support via `FCLI_BOOTSTRAP_VERSION` (accepts with or without 'v' prefix)
+- Minimal runtime dependencies (undici, tar, unzipper)
+- Three-tier configuration: file → env vars → runtime options
+- Intelligent caching with support for persistent tool cache (GitHub Actions)
 - RSA signature verification by default
+- Wraps `fcli tool env` commands for unified tool management
 
 ### License
 
