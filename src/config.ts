@@ -99,24 +99,24 @@ export function getEffectiveConfig(options: BootstrapOptions = {}): BootstrapCon
   // Environment variable overrides
   const envOverrides: Partial<BootstrapConfig> = {};
   
-  if (process.env.FCLI_CACHE_DIR) {
-    envOverrides.cacheDir = process.env.FCLI_CACHE_DIR;
+  if (process.env.FCLI_BOOTSTRAP_CACHE_DIR) {
+    envOverrides.cacheDir = process.env.FCLI_BOOTSTRAP_CACHE_DIR;
   }
   
-  if (process.env.FCLI_URL) {
-    envOverrides.fcliUrl = process.env.FCLI_URL;
+  if (process.env.FCLI_BOOTSTRAP_URL) {
+    envOverrides.fcliUrl = process.env.FCLI_BOOTSTRAP_URL;
   }
   
-  if (process.env.FCLI_RSA_SHA256_URL) {
-    envOverrides.fcliRsaSha256Url = process.env.FCLI_RSA_SHA256_URL;
+  if (process.env.FCLI_BOOTSTRAP_RSA_SHA256_URL) {
+    envOverrides.fcliRsaSha256Url = process.env.FCLI_BOOTSTRAP_RSA_SHA256_URL;
   }
   
-  if (process.env.FCLI_VERIFY_SIGNATURE !== undefined) {
-    envOverrides.verifySignature = process.env.FCLI_VERIFY_SIGNATURE === 'true';
+  if (process.env.FCLI_BOOTSTRAP_VERIFY_SIGNATURE !== undefined) {
+    envOverrides.verifySignature = process.env.FCLI_BOOTSTRAP_VERIFY_SIGNATURE === 'true';
   }
   
-  if (process.env.FCLI_PATH) {
-    envOverrides.fcliPath = process.env.FCLI_PATH;
+  if (process.env.FCLI_BOOTSTRAP_PATH) {
+    envOverrides.fcliPath = process.env.FCLI_BOOTSTRAP_PATH;
   }
   
   // Runtime options take highest precedence

@@ -225,8 +225,8 @@ describe('getEffectiveConfig', () => {
   });
 
   it('should apply environment variable overrides', () => {
-    process.env.FCLI_URL = 'https://env.url/fcli.tgz';
-    process.env.FCLI_VERIFY_SIGNATURE = 'false';
+    process.env.FCLI_BOOTSTRAP_URL = 'https://env.url/fcli.tgz';
+    process.env.FCLI_BOOTSTRAP_VERIFY_SIGNATURE = 'false';
     
     const config = getEffectiveConfig();
     
@@ -235,7 +235,7 @@ describe('getEffectiveConfig', () => {
   });
 
   it('should apply runtime options over environment variables', () => {
-    process.env.FCLI_URL = 'https://env.url/fcli.tgz';
+    process.env.FCLI_BOOTSTRAP_URL = 'https://env.url/fcli.tgz';
     
     const config = getEffectiveConfig({
       fcliUrl: 'https://runtime.url/fcli.tgz'
@@ -244,16 +244,16 @@ describe('getEffectiveConfig', () => {
     expect(config.fcliUrl).toBe('https://runtime.url/fcli.tgz');
   });
 
-  it('should handle FCLI_PATH environment variable', () => {
-    process.env.FCLI_PATH = '/custom/path/to/fcli';
+  it('should handle FCLI_BOOTSTRAP_PATH environment variable', () => {
+    process.env.FCLI_BOOTSTRAP_PATH = '/custom/path/to/fcli';
     
     const config = getEffectiveConfig();
     
     expect(config.fcliPath).toBe('/custom/path/to/fcli');
   });
 
-  it('should handle FCLI_RSA_SHA256_URL environment variable', () => {
-    process.env.FCLI_RSA_SHA256_URL = 'https://example.com/signature';
+  it('should handle FCLI_BOOTSTRAP_RSA_SHA256_URL environment variable', () => {
+    process.env.FCLI_BOOTSTRAP_RSA_SHA256_URL = 'https://example.com/signature';
     
     const config = getEffectiveConfig();
     
@@ -283,7 +283,7 @@ describe('getEffectiveConfig', () => {
       fcliUrl: 'https://file.url/fcli.tgz',
       verifySignature: false
     }));
-    process.env.FCLI_VERIFY_SIGNATURE = 'true';
+    process.env.FCLI_BOOTSTRAP_VERIFY_SIGNATURE = 'true';
     
     const config = getEffectiveConfig({
       fcliPath: '/runtime/fcli'

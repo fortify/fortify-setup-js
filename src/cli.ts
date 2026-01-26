@@ -33,9 +33,9 @@ USAGE
   npx @fortify/setup <command> [options]
 
 COMMANDS
-  config        Configure fcli bootstrap settings
-  env           Initialize tools and generate environment variables
-  cache         Manage cached fcli installation
+  bootstrap-cache   Manage fcli bootstrap cache
+  bootstrap-config  Configure fcli bootstrap settings
+  env               Initialize tools and generate environment variables
 
 Run 'npx @fortify/setup <command> --help' for more information on a command.
 
@@ -56,7 +56,7 @@ Bootstrapping downloads a predefined fcli version that's then used to run
 the fcli fortify-setup action. This command configures bootstrap behavior.
 
 USAGE
-  npx @fortify/setup config [options]
+  npx @fortify/setup bootstrap-config [options]
 
 OPTIONS
   --help|-h                   Show this help information
@@ -80,33 +80,33 @@ OPTION RESET BEHAVIOR
   is active at a time.
 
 ENVIRONMENT VARIABLES
-  FCLI_CACHE_DIR             Override cache directory
-  FCLI_URL                   Override fcli archive download URL
-  FCLI_RSA_SHA256_URL        Override RSA SHA256 signature file URL
-  FCLI_PATH                  Override fcli binary path (must be 3.14.0+)
-  FCLI_VERIFY_SIGNATURE      Enable/disable signature verification (true|false)
+  FCLI_BOOTSTRAP_CACHE_DIR             Override cache directory
+  FCLI_BOOTSTRAP_URL                   Override fcli archive download URL
+  FCLI_BOOTSTRAP_RSA_SHA256_URL        Override RSA SHA256 signature file URL
+  FCLI_BOOTSTRAP_PATH                  Override fcli binary path (must be 3.14.0+)
+  FCLI_BOOTSTRAP_VERIFY_SIGNATURE      Enable/disable signature verification (true|false)
 
 Environment variables override config file settings.
 
 EXAMPLES
   # Use job-specific cache directory (CI/CD)
-  npx @fortify/setup config --cache-dir=$RUNNER_TEMP/.fortify/fcli/bootstrap
+  npx @fortify/setup bootstrap-config --cache-dir=$RUNNER_TEMP/.fortify/fcli/bootstrap
   
   # Use pre-installed fcli (skip downloads)
-  npx @fortify/setup config --fcli-path=/usr/local/bin/fcli
+  npx @fortify/setup bootstrap-config --fcli-path=/usr/local/bin/fcli
   
   # Use custom download URL
-  npx @fortify/setup config --fcli-url=https://my-mirror.com/fcli-linux.tgz
+  npx @fortify/setup bootstrap-config --fcli-url=https://my-mirror.com/fcli-linux.tgz
   
   # Disable signature verification (not recommended)
-  npx @fortify/setup config --no-verify-signature
+  npx @fortify/setup bootstrap-config --no-verify-signature
   
   # Reset to defaults
-  npx @fortify/setup config --reset
+  npx @fortify/setup bootstrap-config --reset
   
   # Configure via environment variables
-  export FCLI_PATH=/usr/local/bin/fcli
-  npx @fortify/setup config
+  export FCLI_BOOTSTRAP_PATH=/usr/local/bin/fcli
+  npx @fortify/setup bootstrap-config
 `);
 }
 
@@ -120,7 +120,7 @@ Manage cached fcli installation
 The cache stores a downloaded fcli for reuse by the 'env' command.
 
 USAGE
-  npx @fortify/setup cache <action>
+  npx @fortify/setup bootstrap-cache <action>
 
 ACTIONS
   refresh       Refresh cached fcli to latest version
@@ -129,13 +129,13 @@ ACTIONS
 
 EXAMPLES
   # Refresh to latest fcli
-  npx @fortify/setup cache refresh
+  npx @fortify/setup bootstrap-cache refresh
   
   # Clear cache
-  npx @fortify/setup cache clear
+  npx @fortify/setup bootstrap-cache clear
   
   # Show cache info
-  npx @fortify/setup cache info
+  npx @fortify/setup bootstrap-cache info
 `);
 }
 
@@ -286,7 +286,7 @@ function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>,
 async function main(): Promise<void> {
   try {
     // Valid subcommands
-    const validCommands = ['config', 'env', 'cache'];
+    const validCommands = ['bootstrap-config', 'env', 'bootstrap-cache'];
     
     // Check for help at root level (no command or command is help flag)
     if (!command || command === '--help' || command === '-h' || command === 'help') {
@@ -301,7 +301,7 @@ async function main(): Promise<void> {
     }
     
     // Configure bootstrap
-    if (command === 'config') {
+    if (command === 'bootstrap-config') {
       const configArgs = args.slice(1);
       
       // Show config help (check for help flag anywhere in args)
@@ -321,7 +321,7 @@ async function main(): Promise<void> {
       if (show) {
         const currentConfig = loadConfig();
         displayConfig(currentConfig);
-        console.log('\nNote: Environment variables (FCLI_URL, FCLI_PATH, etc.) override these settings.');
+        console.log('\nNote: Environment variables (FCLI_BOOTSTRAP_URL, FCLI_BOOTSTRAP_PATH, etc.) override these settings.');
         process.exit(0);
       }
       
@@ -358,7 +358,7 @@ async function main(): Promise<void> {
     }
     
     // Manage cache
-    if (command === 'cache') {
+    if (command === 'bootstrap-cache') {
       const actionArgs = args.slice(1);
       const action = actionArgs[0];
       

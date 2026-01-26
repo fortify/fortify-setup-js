@@ -4,7 +4,7 @@
 
 `@fortify/setup` is a cross-platform utility that automates the setup of Fortify tools in CI/CD pipelines and local development environments by providing a wrapper around `fcli tool env` commands:
 
-1. **Configure fcli bootstrapping** (optional) - Use the `config` command to specify custom fcli download URLs or point to a pre-installed fcli binary (must be 3.14.0+)
+1. **Configure fcli bootstrapping** (optional) - Use the `bootstrap-config` command to specify custom fcli download URLs or point to a pre-installed fcli binary (must be 3.14.0+)
 
 2. **Bootstrap fcli** - Automatically downloads and verifies fcli v3.x from GitHub (or uses configured pre-installed fcli)
 
@@ -24,7 +24,7 @@ npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
 npx @fortify/setup env shell
 
 # Or use pre-installed fcli (skip download, must be 3.14.0+)
-npx @fortify/setup config --fcli-path=/usr/local/bin/fcli
+npx @fortify/setup bootstrap-config --fcli-path=/usr/local/bin/fcli
 npx @fortify/setup env init --tools=sc-client:auto
 
 # Generate GitHub Actions environment
@@ -145,10 +145,10 @@ npx @fortify/setup env init --help
 npx @fortify/setup env shell --help
 ```
 
-### `config` - Configure bootstrap settings
+### `bootstrap-config` - Configure bootstrap settings
 
 ```bash
-npx @fortify/setup config [options]
+npx @fortify/setup bootstrap-config [options]
 ```
 
 Configures how fcli is bootstrapped. Settings are saved to `~/.config/fortify/setup/config.json`.
@@ -169,11 +169,11 @@ Configures how fcli is bootstrapped. Settings are saved to `~/.config/fortify/se
 - `--reset` - Reset configuration to defaults
 
 **Environment variables** (override config file):
-- `FCLI_CACHE_DIR` - Override cache directory
-- `FCLI_URL` - Override fcli archive download URL
-- `FCLI_RSA_SHA256_URL` - Override RSA SHA256 signature file URL
-- `FCLI_PATH` - Override fcli binary path (must be 3.14.0+)
-- `FCLI_VERIFY_SIGNATURE` - Enable/disable signature verification (true|false)
+- `FCLI_BOOTSTRAP_CACHE_DIR` - Override cache directory
+- `FCLI_BOOTSTRAP_URL` - Override fcli archive download URL
+- `FCLI_BOOTSTRAP_RSA_SHA256_URL` - Override RSA SHA256 signature file URL
+- `FCLI_BOOTSTRAP_PATH` - Override fcli binary path (must be 3.14.0+)
+- `FCLI_BOOTSTRAP_VERIFY_SIGNATURE` - Enable/disable signature verification (true|false)
 
 **Pre-installed fcli environment variables** (checked during bootstrap):
 - `FCLI` - Direct path to fcli binary (3.14.0+)
@@ -183,23 +183,23 @@ Configures how fcli is bootstrapped. Settings are saved to `~/.config/fortify/se
 **Examples:**
 ```bash
 # Use pre-installed fcli (skip downloads)
-npx @fortify/setup config --fcli-path=/usr/local/bin/fcli
+npx @fortify/setup bootstrap-config --fcli-path=/usr/local/bin/fcli
 
 # Use custom download URL (internal mirror)
-npx @fortify/setup config --fcli-url=https://my-mirror.com/fcli-linux.tgz
+npx @fortify/setup bootstrap-config --fcli-url=https://my-mirror.com/fcli-linux.tgz
 
 # Disable signature verification (not recommended)
-npx @fortify/setup config --no-verify-signature
+npx @fortify/setup bootstrap-config --no-verify-signature
 
 # Reset to defaults
-npx @fortify/setup config --reset
+npx @fortify/setup bootstrap-config --reset
 
 # View current settings
-npx @fortify/setup config
+npx @fortify/setup bootstrap-config
 
 # Configure via environment variables
-export FCLI_PATH=/usr/local/bin/fcli
-npx @fortify/setup config
+export FCLI_BOOTSTRAP_PATH=/usr/local/bin/fcli
+npx @fortify/setup bootstrap-config
 ```
 
 ## Bootstrap Behavior
@@ -208,7 +208,7 @@ npx @fortify/setup config
 
 **fcli resolution order:**
 
-1. **Configured path** - Via config file or `FCLI_PATH` env var (must be fcli 3.14.0+)
+1. **Configured path** - Via config file or `FCLI_BOOTSTRAP_PATH` env var (must be fcli 3.14.0+)
 2. **FCLI-specific environment variables** - `FCLI`, `FCLI_CMD`, or `FCLI_HOME` (must be 3.14.0+)
 3. **Cached download** - Previously downloaded fcli in internal cache
 4. **Download latest v3.x** - If none of the above are available
@@ -222,7 +222,7 @@ npx @fortify/setup config
 The cache directory can be customized for CI/CD environments or to control cache lifetime:
 
 - **Config file**: Set `cacheDir` in config file
-- **Environment variable**: `FCLI_CACHE_DIR=/path/to/cache`
+- **Environment variable**: `FCLI_BOOTSTRAP_CACHE_DIR=/path/to/cache`
 - **Programmatic API**: Pass `config: { cacheDir: '/path' }` to `runFortifyEnv()`
 
 **Recommended CI cache directories** (job-specific, cleaned between runs):
@@ -350,7 +350,7 @@ RUN scancentral package -o app.zip
 
 ```bash
 # One-time: Configure to use pre-installed fcli (if available)
-npx @fortify/setup config --fcli-path=/usr/local/bin/fcli
+npx @fortify/setup bootstrap-config --fcli-path=/usr/local/bin/fcli
 
 # Initialize Fortify tools
 npx @fortify/setup env init --tools=fcli:auto,sc-client:24.4
@@ -372,7 +372,7 @@ fcli sc-sast scan start --upload
 
 ```bash
 # Install fcli 3.14.0+ manually, then configure
-npx @fortify/setup config --fcli-path=/usr/local/bin/fcli
+npx @fortify/setup bootstrap-config --fcli-path=/usr/local/bin/fcli
 
 # Initialize tools with pre-installed fcli
 npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
@@ -382,12 +382,12 @@ npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
 
 ```bash
 # Configure custom internal mirror
-npx @fortify/setup config \
+npx @fortify/setup bootstrap-config \
   --fcli-url=https://internal-mirror.company.com/fortify/fcli-linux.tgz \
   --fcli-rsa-sha256-url=https://internal-mirror.company.com/fortify/fcli-linux.tgz.rsa_sha256
 
 # Or disable signature verification (not recommended)
-npx @fortify/setup config \
+npx @fortify/setup bootstrap-config \
   --fcli-url=https://internal-mirror.company.com/fortify/fcli-linux.tgz \
   --no-verify-signature
 
@@ -399,8 +399,8 @@ npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
 
 ```bash
 # Set in CI/CD pipeline configuration
-export FCLI_PATH=/opt/fortify/fcli/bin/fcli
-export FCLI_VERIFY_SIGNATURE=false
+export FCLI_BOOTSTRAP_PATH=/opt/fortify/fcli/bin/fcli
+export FCLI_BOOTSTRAP_VERIFY_SIGNATURE=false
 
 # Initialize tools without additional config
 npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
@@ -499,10 +499,10 @@ When using pre-installed fcli (via `--fcli-path` or environment variables), you 
 
 ```bash
 # Disable verification (not recommended)
-npx @fortify/setup config --no-verify-signature
+npx @fortify/setup bootstrap-config --no-verify-signature
 
 # Or specify custom signature URL
-npx @fortify/setup config \
+npx @fortify/setup bootstrap-config \
   --fcli-url=https://custom-url/fcli-linux.tgz \
   --fcli-rsa-sha256-url=https://custom-url/fcli-linux.tgz.rsa_sha256
 ```
@@ -514,10 +514,10 @@ npx @fortify/setup config \
 fcli --version  # Should show 3.14.0+
 
 # Configure path to pre-installed fcli
-npx @fortify/setup config --fcli-path=/usr/local/bin/fcli
+npx @fortify/setup bootstrap-config --fcli-path=/usr/local/bin/fcli
 
 # Or use environment variable
-export FCLI_PATH=/usr/local/bin/fcli
+export FCLI_BOOTSTRAP_PATH=/usr/local/bin/fcli
 npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
 ```
 
@@ -529,7 +529,7 @@ npx @fortify/setup env init --tools=fcli:auto,sc-client:auto
 npx @fortify/setup env shell
 
 # Or configure pre-installed fcli
-npx @fortify/setup config --fcli-path=/usr/local/bin/fcli
+npx @fortify/setup bootstrap-config --fcli-path=/usr/local/bin/fcli
 npx @fortify/setup env shell
 ```
 
@@ -539,7 +539,7 @@ npx @fortify/setup env shell
 # Bootstrap downloads fcli only if not found in cache or via configuration
 # To avoid downloads:
 # 1. Configure pre-installed fcli: --fcli-path=/usr/local/bin/fcli
-# 2. Or use FCLI_PATH environment variable
+# 2. Or use FCLI_BOOTSTRAP_PATH environment variable
 # 3. Or leverage CI/CD tool cache between runs
 ```
 
