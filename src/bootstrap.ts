@@ -133,6 +133,46 @@ async function downloadFile(url: string, destPath: string): Promise<void> {
 }
 
 /**
+ * Wait for a file to be accessible for execution by verifying it can be opened and read.
+ * On Windows, files extracted from ZIP may remain locked briefly even after extraction completes,
+ * preventing execution with "The process cannot access the file because it is being used by another process".
+ * This function waits until the OS has fully released file locks.
+ * 
+ * @param filePath Path to the file to check
+ * @param maxAttempts Maximum number of attempts (default: 50)
+ * @param delayMs Delay between attempts in milliseconds (default: 50)
+ */
+async function waitForFileAccessible(filePath: string, maxAttempts = 50, delayMs = 50): Promise<void> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      // Test file accessibility by opening for reading and attempting a small read
+      // This mimics what the OS does when executing the file
+      const fd = fs.openSync(filePath, 'r');
+      try {
+        // Try to read first byte to ensure file is fully written and unlocked
+        const buffer = Buffer.allocUnsafe(1);
+        fs.readSync(fd, buffer, 0, 1, 0);
+      } finally {
+        fs.closeSync(fd);
+      }
+      return; // Success - file is readable
+    } catch (error: any) {
+      // EBUSY, EPERM, or EACCES indicate file is still locked or not ready
+      const isLockError = error.code === 'EBUSY' || error.code === 'EPERM' || error.code === 'EACCES';
+      if (attempt === maxAttempts) {
+        throw new Error(`File ${filePath} is not accessible after ${maxAttempts} attempts (${attempt * delayMs}ms): ${formatError(error)}`);
+      }
+      // Only retry on lock-related errors; throw immediately for other errors
+      if (!isLockError) {
+        throw error;
+      }
+      // Wait before next attempt
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
+/**
  * Extract archive using pure Node.js implementation
  */
 async function extractArchive(archivePath: string, destDir: string): Promise<void> {
@@ -229,6 +269,10 @@ async function downloadAndInstallFcli(config: BootstrapConfig): Promise<{ fcliPa
   // Extract
   defaultLogger.info('Extracting fcli...');
   await extractArchive(archivePath, extractDir);
+  
+  // Wait for fcli binary to be accessible (especially important on Windows)
+  // This ensures file locks are released before attempting to execute the binary
+  await waitForFileAccessible(fcliPath);
   
   // Make executable (Linux/Mac)
   if (os.platform() !== 'win32') {
