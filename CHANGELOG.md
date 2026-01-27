@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1](https://github.com/fortify/fortify-setup-js/compare/v2.1.0...v2.1.1) (2026-01-27)
+
+
+### Bug Fixes
+
+* Fix `fcli.exe` file lock issue on Windows ([bf4a146](https://github.com/fortify/fortify-setup-js/commit/bf4a1469e004c1f18b8a7e50f0a9dce0faf7b85a))
+
 ## [2.1.0](https://github.com/fortify/fortify-setup-js/compare/v2.0.0...v2.1.0) (2026-01-26)
 
 
