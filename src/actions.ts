@@ -133,12 +133,9 @@ export async function runFortifyEnv(options: RunActionOptions = {}): Promise<Run
       output: (verbose && isInit) ? undefined : output
     };
   } catch (error) {
-    if (verbose) {
-      showTroubleshootingMessage('fcli tool env command failed', bootstrap.source, logger);
-    }
-    
-    // Show command output on failure
     const err = error as { stderr?: Buffer; stdout?: Buffer; status?: number };
+
+    // Show command output on failure (helpful for diagnostics)
     if (err.stderr) {
       logger.error('Error output from fcli command:');
       logger.error(err.stderr.toString());
@@ -147,7 +144,10 @@ export async function runFortifyEnv(options: RunActionOptions = {}): Promise<Run
       logger.error('Standard output from fcli command:');
       logger.error(err.stdout.toString());
     }
-    
+
+    // Always show an actionable troubleshooting message; include platform-specific hints when available
+    showTroubleshootingMessage('fcli tool env command failed', bootstrap.source, logger, err?.status);
+
     return {
       bootstrap,
       exitCode: err.status || 1,
@@ -159,13 +159,18 @@ export async function runFortifyEnv(options: RunActionOptions = {}): Promise<Run
 /**
  * Display troubleshooting message for fcli command failures
  */
-function showTroubleshootingMessage(context: string, source: BootstrapSource, logger: ReturnType<typeof createLogger>): void {
+function showTroubleshootingMessage(context: string, source: BootstrapSource, logger: ReturnType<typeof createLogger>, statusCode?: number): void {
   logger.error(`\n❌ ${context}\n`);
   logger.error('Troubleshooting suggestions:');
-  logger.error('  • Verify your options are correct');
+  if (statusCode === 3221225781 && os.platform() === 'win32') { // STATUS_DLL_NOT_FOUND
+    logger.error('  • Unable to execute fcli due to missing DLL files. Please ensure the Visual C++ Redistributable');
+    logger.error('    is installed: https://aka.ms/vs/17/release/vc_redist.x64.exe');
+  } else {
+    logger.error('  • Verify your options are correct');
+  }
   if (source === BootstrapSource.CONFIGURED || source === BootstrapSource.PREINSTALLED) {
     logger.error('  • Your custom fcli may be too old or incompatible (requires fcli 3.14.0 or later)');
-    logger.error('  • Try using the default version: fortify-setup config --reset');
+    logger.error('    Try using the default version: fortify-setup config --reset');
   }
   logger.error('');
 }
