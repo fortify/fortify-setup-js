@@ -163,8 +163,8 @@ function showTroubleshootingMessage(context: string, source: BootstrapSource, lo
   logger.error(`\n❌ ${context}\n`);
   logger.error('Troubleshooting suggestions:');
   if (statusCode === 3221225781 && os.platform() === 'win32') { // STATUS_DLL_NOT_FOUND
-    logger.error('  • Unable to execute fcli due to missing DLL files. Please ensure the Visual C++ Redistributable');
-    logger.error('    is installed: https://aka.ms/vs/17/release/vc_redist.x64.exe');
+    logger.error('  • Fcli invocation failed due to missing DLL files. Please ensure the Visual C++');
+    logger.error('    Redistributable is installed: https://aka.ms/vs/17/release/vc_redist.x64.exe');
   } else {
     logger.error('  • Verify your options are correct');
   }
