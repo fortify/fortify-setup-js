@@ -32,7 +32,7 @@ jobs:
         run: npm run test:coverage
       
       - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
+        uses: fortify/3rdparty-actions/actions/codecov/codecov-action/v4@main
         if: always()
         with:
           files: ./coverage/coverage-final.json
@@ -117,7 +117,7 @@ jobs:
     
     steps:
       - name: Create Release PR or Publish Release
-        uses: googleapis/release-please-action@v4
+        uses: fortify/3rdparty-actions/actions/googleapis/release-please-action/v4@main
         id: release
         with:
           release-type: node
