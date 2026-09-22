@@ -15,10 +15,10 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: fortify/shared-github/actions/3rdparty/actions/checkout/v6@5ad1afec0f56a21b03f0887eea35505cb6a66554
       
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: fortify/shared-github/actions/3rdparty/actions/setup-node/v6@5ad1afec0f56a21b03f0887eea35505cb6a66554
         with:
           node-version: '20'
       
@@ -32,7 +32,7 @@ jobs:
         run: npm run test:coverage
       
       - name: Upload coverage reports
-        uses: fortify/3rdparty-actions/actions/codecov/codecov-action/v4@main
+        uses: fortify/shared-github/actions/3rdparty/codecov/codecov-action/v4@5ad1afec0f56a21b03f0887eea35505cb6a66554
         if: always()
         with:
           files: ./coverage/coverage-final.json
@@ -47,10 +47,10 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: fortify/shared-github/actions/3rdparty/actions/checkout/v6@5ad1afec0f56a21b03f0887eea35505cb6a66554
       
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: fortify/shared-github/actions/3rdparty/actions/setup-node/v6@5ad1afec0f56a21b03f0887eea35505cb6a66554
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
@@ -65,7 +65,7 @@ jobs:
         run: node dist/cli.js --help
       
       - name: Upload dist artifacts
-        uses: actions/upload-artifact@v7
+        uses: fortify/shared-github/actions/3rdparty/actions/upload-artifact/v7@5ad1afec0f56a21b03f0887eea35505cb6a66554
         with:
           name: dist
           path: dist/
@@ -81,10 +81,10 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: fortify/shared-github/actions/3rdparty/actions/checkout/v6@5ad1afec0f56a21b03f0887eea35505cb6a66554
       
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: fortify/shared-github/actions/3rdparty/actions/setup-node/v6@5ad1afec0f56a21b03f0887eea35505cb6a66554
         with:
           node-version: '20'
       
@@ -92,7 +92,7 @@ jobs:
         run: npm ci
       
       - name: Download build artifacts
-        uses: actions/download-artifact@v8
+        uses: fortify/shared-github/actions/3rdparty/actions/download-artifact/v8@5ad1afec0f56a21b03f0887eea35505cb6a66554
         with:
           name: dist
           path: dist
@@ -117,7 +117,7 @@ jobs:
     
     steps:
       - name: Create Release PR or Publish Release
-        uses: fortify/3rdparty-actions/actions/googleapis/release-please-action/v5@main
+        uses: fortify/shared-github/actions/3rdparty/googleapis/release-please-action/v5@5ad1afec0f56a21b03f0887eea35505cb6a66554
         id: release
         with:
           release-type: node
@@ -125,11 +125,11 @@ jobs:
       
       - name: Checkout code (if release created)
         if: ${{ steps.release.outputs.release_created }}
-        uses: actions/checkout@v6
+        uses: fortify/shared-github/actions/3rdparty/actions/checkout/v6@5ad1afec0f56a21b03f0887eea35505cb6a66554
       
       - name: Setup Node.js (if release created)
         if: ${{ steps.release.outputs.release_created }}
-        uses: actions/setup-node@v6
+        uses: fortify/shared-github/actions/3rdparty/actions/setup-node/v6@5ad1afec0f56a21b03f0887eea35505cb6a66554
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
