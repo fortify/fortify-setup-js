@@ -130,7 +130,8 @@ jobs:
         uses: fortify/shared-github/actions/3rdparty/googleapis/release-please-action/v5@5ad1afec0f56a21b03f0887eea35505cb6a66554
         id: release
         with:
-          release-type: node
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
           target-branch: ${{ github.ref_name }}
       
       - name: Checkout code (if release created)

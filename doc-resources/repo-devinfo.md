@@ -46,6 +46,12 @@ fortify-setup env init --tools=fcli:auto
 
 Releases are automated via [release-please](https://github.com/googleapis/release-please):
 
+The workflow uses `release-please-config.json` and `.release-please-manifest.json`
+explicitly. The manifest records the last released version used as the changelog
+baseline. Do not add a `release-type` action input: it bypasses these files and can
+infer the wrong baseline from an abandoned release PR. Tags retain the `vX.Y.Z`
+format without a package component prefix.
+
 1. Commits to `main` using [Conventional Commits](https://www.conventionalcommits.org/)
 2. release-please creates/updates a release PR with:
    - Version bump (based on commit types)
@@ -87,7 +93,8 @@ explicitly approves replacing the already-public Git tag:
    `.release-please-manifest.json`, and `CHANGELOG.md`; retain the features and CI
    fixes. Push with a `Release-As: <failed-version>` commit footer to request the
    same version.
-5. Review and merge the fresh release PR, then verify that its normal CI run
+5. Review the fresh release PR, ensuring its changelog starts at the last published
+   version and excludes earlier changes. Merge it, then verify that its normal CI run
    publishes to both registries. The recreated tag will point to the new release
    commit. Each publish step also looks up the published registry metadata.
 
