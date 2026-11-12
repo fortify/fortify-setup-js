@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/fortify/fortify-setup-js/compare/v2.1.3...v2.2.0) (2026-11-12)
+
+
+### Features
+
+* support Linux arm64 fcli downloads ([#33](https://github.com/fortify/fortify-setup-js/issues/33)) ([c0184ad](https://github.com/fortify/fortify-setup-js/commit/c0184ad052e3f07b405d55a1ffe5402c2556092d))
+
 ## [2.1.3](https://github.com/fortify/fortify-setup-js/compare/v2.1.2...v2.1.3) (2026-02-23)
 
 
