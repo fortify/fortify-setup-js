@@ -96,11 +96,14 @@ explicitly approves replacing the already-public Git tag:
 5. Review the fresh release PR, ensuring its changelog starts at the last published
    version and excludes earlier changes. Merge it, then verify that its normal CI run
    publishes to both registries. The recreated tag will point to the new release
-   commit. Each publish step also looks up the published registry metadata.
+   commit. Allow for registry processing delays before checking published metadata;
+   an initial 404 after a successful publish does not mean publication failed.
 
 Do not use this procedure after partial publication: registries do not allow
 overwriting an existing version. Prefer a new version whenever replacing the
 public tag is unacceptable or package sources need changing.
+After partial publication, complete only the missing registry without republishing
+the successful one or changing the release tag.
 
 ### Architecture
 
