@@ -52,12 +52,40 @@ Releases are automated via [release-please](https://github.com/googleapis/releas
    - CHANGELOG.md updates
    - package.json version update
 3. Merge PR to trigger release
-4. npm package published automatically
+4. Package published automatically to npm and GitHub Packages, with provenance
+
+Before creating a release, CI installs the same pinned Node.js/npm publishing
+toolchain and runs `npm publish --dry-run` for both registries. This checks package
+preparation, including the `prepublishOnly` lifecycle, on ordinary PRs and pushes.
+Keep the publishing versions in `.github/workflows/ci.yml` compatible when updating
+them; do not use `npm@latest` only in the release path. Registry authentication and
+provenance still require a real publish to validate.
 
 **Commit types:**
 - `feat`: Minor version bump
 - `fix`: Patch version bump
 - `feat!` or `BREAKING CHANGE`: Major version bump
+
+#### Release Recovery
+
+If publishing fails after release-please has created the GitHub release, simply
+rerunning the job may not set `release_created` again. For a workflow-only fix,
+when the version has not been published to either registry:
+
+1. Push the workflow fix and wait for its CI checks to pass.
+2. Save the existing release metadata, then delete only the GitHub release entry.
+   Preserve the release tag and its commit; do not use `--cleanup-tag`.
+3. On the original merged release PR, replace `autorelease: tagged` with
+   `autorelease: pending`. A merged PR cannot be reopened.
+4. Rerun the **Release Please** job from the fixed workflow run, not the original
+   failed run. It recreates the release using the existing tag and publishes the
+   package from the release commit.
+5. Verify the version is available in both registries and the release tag has not
+   moved. Each publish step also looks up the published registry metadata.
+
+Do not use this procedure blindly after partial publication: registries do not
+allow overwriting an existing version. If package sources need changing, release
+a new version rather than moving an existing release tag.
 
 ### Architecture
 

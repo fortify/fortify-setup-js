@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+env:
+  RELEASE_NODE_VERSION: '24.22.3'
+  RELEASE_NPM_VERSION: '12.2.2'
+
 jobs:
   unit-tests:
     name: Unit Tests
@@ -52,8 +56,11 @@ jobs:
       - name: Setup Node.js
         uses: fortify/shared-github/actions/3rdparty/actions/setup-node/v6@5ad1afec0f56a21b03f0887eea35505cb6a66554
         with:
-          node-version: '20'
+          node-version: ${{ env.RELEASE_NODE_VERSION }}
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Install publishing npm version
+        run: npm install -g "npm@$RELEASE_NPM_VERSION"
       
       - name: Install dependencies
         run: npm ci
@@ -63,6 +70,12 @@ jobs:
       
       - name: Check CLI runs
         run: node dist/cli.js --help
+
+      - name: Validate npm publication
+        run: npm publish --dry-run --access public --registry https://registry.npmjs.org
+
+      - name: Validate GitHub Packages publication
+        run: npm publish --dry-run --access public --registry https://npm.pkg.github.com
       
       - name: Upload dist artifacts
         uses: fortify/shared-github/actions/3rdparty/actions/upload-artifact/v7@5ad1afec0f56a21b03f0887eea35505cb6a66554
@@ -126,18 +139,21 @@ jobs:
       - name: Checkout code (if release created)
         if: ${{ steps.release.outputs.release_created }}
         uses: fortify/shared-github/actions/3rdparty/actions/checkout/v6@5ad1afec0f56a21b03f0887eea35505cb6a66554
+        with:
+          ref: ${{ steps.release.outputs.sha }}
       
       - name: Setup Node.js (if release created)
         if: ${{ steps.release.outputs.release_created }}
         uses: fortify/shared-github/actions/3rdparty/actions/setup-node/v6@5ad1afec0f56a21b03f0887eea35505cb6a66554
         with:
-          node-version: '20'
+          node-version: ${{ env.RELEASE_NODE_VERSION }}
           registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
       
-      - name: Update npm (if release created)
+      - name: Install publishing npm version (if release created)
         if: ${{ steps.release.outputs.release_created }}
-        run: npm install -g npm@latest
-      
+        run: npm install -g "npm@$RELEASE_NPM_VERSION"
+
       - name: Install dependencies (if release created)
         if: ${{ steps.release.outputs.release_created }}
         run: npm ci
@@ -148,15 +164,21 @@ jobs:
 
       - name: Publish to npm
         if: ${{ steps.release.outputs.release_created }}
-        run: npm publish --provenance --access public
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          npm publish --provenance --access public --registry https://registry.npmjs.org
+          npm view "@fortify/setup@$RELEASE_VERSION" version dist.integrity --json --registry https://registry.npmjs.org
       
       - name: Publish to GitHub Packages
         if: ${{ steps.release.outputs.release_created }}
         run: |
-          npm config set //npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
+          npm config set "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}"
           npm publish --provenance --access public --registry https://npm.pkg.github.com
+          npm view "@fortify/setup@$RELEASE_VERSION" version dist.integrity --json --registry https://npm.pkg.github.com
         env:
           NODE_AUTH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
       
       - name: Publish summary
         if: ${{ steps.release.outputs.release_created }}

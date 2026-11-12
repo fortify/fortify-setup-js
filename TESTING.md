@@ -118,10 +118,25 @@ The project uses GitHub Actions with a multi-stage pipeline:
 ```
 
 **2. Build** (ubuntu-latest, ~1min)
+
+Uses the same pinned Node.js and npm versions as publishing, configured by
+`RELEASE_NODE_VERSION` and `RELEASE_NPM_VERSION` in `.github/workflows/ci.yml`.
+Unit and integration tests continue to run on Node.js 20.
+
 ```yaml
+- run: npm install -g "npm@$RELEASE_NPM_VERSION"
 - run: npm ci
 - run: npm run build
+- run: node dist/cli.js --help
+- run: npm publish --dry-run --access public --registry https://registry.npmjs.org
+- run: npm publish --dry-run --access public --registry https://npm.pkg.github.com
 ```
+
+Both dry-runs execute the `prepublishOnly` clean/build lifecycle and validate
+package preparation on every pull request and push, without uploading a package.
+Installing the publishing npm version in this job catches Node.js/npm engine
+incompatibilities before a release is created. Dry-runs do not validate registry
+write permissions, OIDC trust, or provenance; these are checked during publication.
 
 **3. Integration/E2E Tests** (matrix: Linux/Windows/macOS, ~5-10min per platform)
 ```yaml
@@ -135,6 +150,8 @@ steps:
 ```
 
 All tests must pass on all platforms before release.
+See [Developer Information](doc-resources/repo-devinfo.md#release-recovery) for
+recovering a release that failed before package publication.
 
 ## Test Statistics
 
