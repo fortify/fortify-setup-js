@@ -16,7 +16,7 @@ import * as tar from 'tar';
 import * as unzipper from 'unzipper';
 import type { BootstrapConfig, BootstrapResult, BootstrapOptions, DownloadMetadata } from './types.js';
 import { BootstrapSource } from './types.js';
-import { getEffectiveConfig, getTempDir, getFcliVersion as getFcliVersionConstant, getDefaultConfig, getBootstrapBinPath } from './config.js';
+import { getEffectiveConfig, getTempDir, getFcliVersion as getFcliVersionConstant, getDefaultConfig, getBootstrapBinPath, getFcliArchiveName, FCLI_LINUX_ARM64_ARCHIVE } from './config.js';
 import { createLogger, defaultLogger } from './logger.js';
 import { formatError } from './utils.js';
 
@@ -34,17 +34,11 @@ VQIDAQAB
 -----END PUBLIC KEY-----`;
 
 /**
- * Detect platform and return archive name
+ * Error thrown when an HTTP download returns a non-success status
  */
-function getFcliArchiveName(): string {
-  const platform = os.platform();
-  
-  if (platform === 'win32') {
-    return 'fcli-windows.zip';
-  } else if (platform === 'darwin') {
-    return 'fcli-mac.tgz';
-  } else {
-    return 'fcli-linux.tgz';
+class DownloadError extends Error {
+  constructor(readonly status: number, statusText: string) {
+    super(`Download failed: ${status} ${statusText}`);
   }
 }
 
@@ -114,7 +108,7 @@ async function downloadFile(url: string, destPath: string): Promise<void> {
   });
   
   if (!response.ok) {
-    throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+    throw new DownloadError(response.status, response.statusText);
   }
   
   if (!response.body) {
@@ -236,6 +230,10 @@ async function downloadAndInstallFcli(config: BootstrapConfig): Promise<{ fcliPa
   try {
     await downloadFile(downloadUrl, archivePath);
   } catch (error) {
+    if (error instanceof DownloadError && error.status === 404 && downloadUrl.endsWith(`/${FCLI_LINUX_ARM64_ARCHIVE}`)) {
+      throw new Error(`Failed to download fcli from ${downloadUrl}: the requested fcli release doesn't provide a Linux arm64 binary.\n`
+        + `Use an fcli version that provides ${FCLI_LINUX_ARM64_ARCHIVE}, or configure an alternative fcli installation through --fcli-url/FCLI_BOOTSTRAP_URL or --fcli-path/FCLI_BOOTSTRAP_PATH.`);
+    }
     throw new Error(`Failed to download fcli from ${downloadUrl}: ${formatError(error)}`);
   }
   

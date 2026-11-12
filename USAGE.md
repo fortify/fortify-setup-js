@@ -152,6 +152,8 @@ Configures how fcli is bootstrapped. Settings are saved to `~/.config/fortify/se
   - Special tags are used as-is: `dev_v3.x`, `latest`, `main`
   - Examples: `v3`, `v3.14`, `v3.14.1`, `3`, `3.14`, `3.14.1`, `dev_v3.x`
   - Default: `v3` (latest v3.x release)
+  - The release asset is selected based on the current platform: `fcli-linux.tgz` (Linux x64), `fcli-linux-arm64.tgz` (Linux arm64), `fcli-mac.tgz` (macOS), or `fcli-windows.zip` (Windows)
+  - On Linux arm64, bootstrapping fails if the selected fcli version doesn't provide `fcli-linux-arm64.tgz`
   - Ignored if `--fcli-url` is specified
 - `--fcli-url=<url>` - Full URL to fcli archive (platform-specific)
   - Example: `https://github.com/fortify/fcli/releases/download/v3/fcli-linux.tgz`

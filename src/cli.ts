@@ -10,7 +10,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { runFortifyEnv, getFcliPathForEnv } from './actions.js';
-import { loadConfig, saveConfig, getDefaultConfig } from './config.js';
+import { loadConfig, saveConfig, getDefaultConfig, buildFcliUrl } from './config.js';
 import type { BootstrapConfig } from './types.js';
 import { BootstrapSource } from './types.js';
 import { createLogger, defaultLogger } from './logger.js';
@@ -208,38 +208,6 @@ EXAMPLES
 }
 
 /**
- * Normalize version to ensure it starts with 'v' prefix
- * Only adds 'v' prefix if version contains only numbers and dots (e.g., '3.14.1')
- * Leaves special tags unchanged (e.g., 'dev_v3.x', 'latest')
- */
-function normalizeVersion(version: string): string {
-  if (version.startsWith('v')) {
-    return version;
-  }
-  // Only add 'v' prefix if version contains only numbers and dots
-  return /^[\d.]+$/.test(version) ? `v${version}` : version;
-}
-
-/**
- * Build fcli URL for display purposes (matches config.ts buildFcliUrl logic)
- */
-function buildFcliUrlForDisplay(version: string): string {
-  const normalizedVersion = normalizeVersion(version);
-  const platform = os.platform();
-  let archiveName: string;
-  
-  if (platform === 'win32') {
-    archiveName = 'fcli-windows.zip';
-  } else if (platform === 'darwin') {
-    archiveName = 'fcli-mac.tgz';
-  } else {
-    archiveName = 'fcli-linux.tgz';
-  }
-  
-  return `https://github.com/fortify/fcli/releases/download/${normalizedVersion}/${archiveName}`;
-}
-
-/**
  * Display current configuration
  */
 function displayConfig(config: BootstrapConfig): void {
@@ -255,7 +223,7 @@ function displayConfig(config: BootstrapConfig): void {
     if (config.fcliPath) {
     console.log(`  fcli-path: ${config.fcliPath}`);
   } else {
-    const effectiveUrl = config.fcliUrl || buildFcliUrlForDisplay('v3');
+    const effectiveUrl = config.fcliUrl || buildFcliUrl('v3');
     console.log(`  fcli-url:            ${effectiveUrl}`);
     const rsaSha256Url = config.fcliRsaSha256Url || `${effectiveUrl}.rsa_sha256`;
     console.log(`  fcli-rsa-sha256-url: ${rsaSha256Url}`);
@@ -301,7 +269,7 @@ function parseConfigOptions(args: string[]): { config: Partial<BootstrapConfig>,
     } else if (arg.startsWith('--fcli-version')) {
       const [value, newIndex] = parseCliArgument(args, i, '--fcli-version');
       // Build URL from version immediately (don't save version to config)
-      config.fcliUrl = buildFcliUrlForDisplay(value);
+      config.fcliUrl = buildFcliUrl(value);
       i = newIndex;
     } else if (arg.startsWith('--fcli-url')) {
       const [value, newIndex] = parseCliArgument(args, i, '--fcli-url');

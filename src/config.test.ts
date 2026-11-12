@@ -12,9 +12,11 @@ vi.mock('fs');
 vi.mock('os', () => ({
   default: {
     platform: vi.fn(() => 'linux'),
+    arch: vi.fn(() => 'x64'),
     homedir: vi.fn(() => '/home/user')
   },
   platform: vi.fn(() => 'linux'),
+  arch: vi.fn(() => 'x64'),
   homedir: vi.fn(() => '/home/user')
 }));
 
@@ -36,6 +38,10 @@ describe('getFcliVersion', () => {
 });
 
 describe('getDefaultConfig', () => {
+  beforeEach(() => {
+    vi.mocked(os.arch).mockReturnValue('x64');
+  });
+
   it('should return default config for Windows', () => {
     vi.mocked(os.platform).mockReturnValue('win32');
     
@@ -66,6 +72,24 @@ describe('getDefaultConfig', () => {
     expect(config.verifySignature).toBe(true);
   });
 
+  it('should return default config for Linux arm64', () => {
+    vi.mocked(os.platform).mockReturnValue('linux');
+    vi.mocked(os.arch).mockReturnValue('arm64');
+
+    const config = getDefaultConfig();
+
+    expect(config.fcliUrl).toBe('https://github.com/fortify/fcli/releases/download/v3/fcli-linux-arm64.tgz');
+  });
+
+  it('should use x64 archive for Windows arm64', () => {
+    vi.mocked(os.platform).mockReturnValue('win32');
+    vi.mocked(os.arch).mockReturnValue('arm64');
+
+    const config = getDefaultConfig();
+
+    expect(config.fcliUrl).toContain('fcli-windows.zip');
+  });
+
   it('should include GitHub release URL structure', () => {
     vi.mocked(os.platform).mockReturnValue('linux');
     
@@ -79,6 +103,7 @@ describe('loadConfig', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.mocked(os.platform).mockReturnValue('linux');
+    vi.mocked(os.arch).mockReturnValue('x64');
     vi.mocked(os.homedir).mockReturnValue('/home/user');
   });
 
@@ -208,6 +233,7 @@ describe('getEffectiveConfig', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.mocked(os.platform).mockReturnValue('linux');
+    vi.mocked(os.arch).mockReturnValue('x64');
     vi.mocked(os.homedir).mockReturnValue('/home/user');
     vi.mocked(fs.existsSync).mockReturnValue(false);
     process.env = { ...originalEnv };
@@ -326,6 +352,11 @@ describe('getEffectiveConfig', () => {
     vi.mocked(os.platform).mockReturnValue('linux');
     config = getEffectiveConfig();
     expect(config.fcliUrl).toBe('https://github.com/fortify/fcli/releases/download/v3.5.0/fcli-linux.tgz');
+
+    // Test Linux arm64
+    vi.mocked(os.arch).mockReturnValue('arm64');
+    config = getEffectiveConfig();
+    expect(config.fcliUrl).toBe('https://github.com/fortify/fcli/releases/download/v3.5.0/fcli-linux-arm64.tgz');
   });
 
   it('should throw error for invalid fcliUrl', () => {

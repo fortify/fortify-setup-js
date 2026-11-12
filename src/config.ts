@@ -35,23 +35,32 @@ function normalizeVersion(version: string): string {
   return /^[\d.]+$/.test(version) ? `v${version}` : version;
 }
 
+export const FCLI_LINUX_ARM64_ARCHIVE = 'fcli-linux-arm64.tgz';
+
+/**
+ * Get name of the fcli release asset for the current platform and architecture.
+ * Windows on arm64 uses the x64 binary through emulation, as fcli doesn't
+ * provide a native Windows arm64 binary.
+ */
+export function getFcliArchiveName(): string {
+  const platform = os.platform();
+  
+  if (platform === 'win32') {
+    return 'fcli-windows.zip';
+  } else if (platform === 'darwin') {
+    return 'fcli-mac.tgz';
+  } else if (os.arch() === 'arm64') {
+    return FCLI_LINUX_ARM64_ARCHIVE;
+  } else {
+    return 'fcli-linux.tgz';
+  }
+}
+
 /**
  * Build fcli download URL from version
  */
-function buildFcliUrl(version: string): string {
-  const normalizedVersion = normalizeVersion(version);
-  const platform = os.platform();
-  let archiveName: string;
-  
-  if (platform === 'win32') {
-    archiveName = 'fcli-windows.zip';
-  } else if (platform === 'darwin') {
-    archiveName = 'fcli-mac.tgz';
-  } else {
-    archiveName = 'fcli-linux.tgz';
-  }
-  
-  return `https://github.com/fortify/fcli/releases/download/${normalizedVersion}/${archiveName}`;
+export function buildFcliUrl(version: string): string {
+  return `https://github.com/fortify/fcli/releases/download/${normalizeVersion(version)}/${getFcliArchiveName()}`;
 }
 
 /**
