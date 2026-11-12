@@ -65,17 +65,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
-      - name: Build
-        run: npm run build
+      - name: Run publish build lifecycle
+        run: npm run prepublishOnly
       
       - name: Check CLI runs
         run: node dist/cli.js --help
 
-      - name: Validate npm publication
-        run: npm publish --dry-run --access public --registry https://registry.npmjs.org
-
-      - name: Validate GitHub Packages publication
-        run: npm publish --dry-run --access public --registry https://npm.pkg.github.com
+      - name: Validate release package
+        run: npm pack --dry-run
       
       - name: Upload dist artifacts
         uses: fortify/shared-github/actions/3rdparty/actions/upload-artifact/v7@5ad1afec0f56a21b03f0887eea35505cb6a66554

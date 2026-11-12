@@ -126,17 +126,18 @@ Unit and integration tests continue to run on Node.js 20.
 ```yaml
 - run: npm install -g "npm@$RELEASE_NPM_VERSION"
 - run: npm ci
-- run: npm run build
+- run: npm run prepublishOnly
 - run: node dist/cli.js --help
-- run: npm publish --dry-run --access public --registry https://registry.npmjs.org
-- run: npm publish --dry-run --access public --registry https://npm.pkg.github.com
+- run: npm pack --dry-run
 ```
 
-Both dry-runs execute the `prepublishOnly` clean/build lifecycle and validate
-package preparation on every pull request and push, without uploading a package.
+CI explicitly executes the `prepublishOnly` clean/build lifecycle, then validates
+package preparation with `npm pack --dry-run` on every pull request and push,
+without uploading a package. Unlike `npm publish --dry-run`, packing works when
+the checked-in version is already published, as is normal between releases.
 Installing the publishing npm version in this job catches Node.js/npm engine
-incompatibilities before a release is created. Dry-runs do not validate registry
-write permissions, OIDC trust, or provenance; these are checked during publication.
+incompatibilities before a release is created. Registry version availability,
+write permissions, OIDC trust, and provenance are checked during real publication.
 
 **3. Integration/E2E Tests** (matrix: Linux/Windows/macOS, ~5-10min per platform)
 ```yaml

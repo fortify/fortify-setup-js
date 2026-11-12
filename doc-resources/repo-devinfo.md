@@ -55,11 +55,12 @@ Releases are automated via [release-please](https://github.com/googleapis/releas
 4. Package published automatically to npm and GitHub Packages, with provenance
 
 Before creating a release, CI installs the same pinned Node.js/npm publishing
-toolchain and runs `npm publish --dry-run` for both registries. This checks package
-preparation, including the `prepublishOnly` lifecycle, on ordinary PRs and pushes.
+toolchain, explicitly runs `npm run prepublishOnly`, and validates the package with
+`npm pack --dry-run` on ordinary PRs and pushes. Packing avoids the duplicate-version
+errors that `npm publish --dry-run` can raise for the last published version.
 Keep the publishing versions in `.github/workflows/ci.yml` compatible when updating
-them; do not use `npm@latest` only in the release path. Registry authentication and
-provenance still require a real publish to validate.
+them; do not use `npm@latest` only in the release path. Registry version availability,
+authentication, and provenance still require a real publish to validate.
 
 **Commit types:**
 - `feat`: Minor version bump
