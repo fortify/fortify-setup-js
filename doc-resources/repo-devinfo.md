@@ -69,23 +69,30 @@ provenance still require a real publish to validate.
 #### Release Recovery
 
 If publishing fails after release-please has created the GitHub release, simply
-rerunning the job may not set `release_created` again. For a workflow-only fix,
-when the version has not been published to either registry:
+rerunning the job may not set `release_created` again. Relabeling the old release
+PR can also fail with `Resource not accessible by integration`: after workflow
+changes, `GITHUB_TOKEN` may lack permission to recreate a release at the old
+commit. A fresh release PR avoids this older-commit restriction.
+
+Only when the version has not been published to either registry, and a maintainer
+explicitly approves replacing the already-public Git tag:
 
 1. Push the workflow fix and wait for its CI checks to pass.
-2. Save the existing release metadata, then delete only the GitHub release entry.
-   Preserve the release tag and its commit; do not use `--cleanup-tag`.
-3. On the original merged release PR, replace `autorelease: tagged` with
-   `autorelease: pending`. A merged PR cannot be reopened.
-4. Rerun the **Release Please** job from the fixed workflow run, not the original
-   failed run. It recreates the release using the existing tag and publishes the
-   package from the release commit.
-5. Verify the version is available in both registries and the release tag has not
-   moved. Each publish step also looks up the published registry metadata.
+2. Save the release metadata and original tag SHA, then delete the failed GitHub
+   release and tag.
+3. Clear `autorelease: pending` and `autorelease: tagged` from the original merged
+   release PR. A merged PR cannot be reopened.
+4. Reset only the failed version bump in `package.json`, `package-lock.json`,
+   `.release-please-manifest.json`, and `CHANGELOG.md`; retain the features and CI
+   fixes. Push with a `Release-As: <failed-version>` commit footer to request the
+   same version.
+5. Review and merge the fresh release PR, then verify that its normal CI run
+   publishes to both registries. The recreated tag will point to the new release
+   commit. Each publish step also looks up the published registry metadata.
 
-Do not use this procedure blindly after partial publication: registries do not
-allow overwriting an existing version. If package sources need changing, release
-a new version rather than moving an existing release tag.
+Do not use this procedure after partial publication: registries do not allow
+overwriting an existing version. Prefer a new version whenever replacing the
+public tag is unacceptable or package sources need changing.
 
 ### Architecture
 
