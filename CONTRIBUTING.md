@@ -55,18 +55,64 @@ fortify-setup env init --tools=fcli:auto
 
 Releases are automated via [release-please](https://github.com/googleapis/release-please):
 
+The workflow uses `release-please-config.json` and `.release-please-manifest.json`
+explicitly. The manifest records the last released version used as the changelog
+baseline. Do not add a `release-type` action input: it bypasses these files and can
+infer the wrong baseline from an abandoned release PR. Tags retain the `vX.Y.Z`
+format without a package component prefix.
+
 1. Commits to `main` using [Conventional Commits](https://www.conventionalcommits.org/)
 2. release-please creates/updates a release PR with:
    - Version bump (based on commit types)
    - CHANGELOG.md updates
    - package.json version update
 3. Merge PR to trigger release
-4. npm package published automatically
+4. Package published automatically to npm and GitHub Packages, with provenance
+
+Before creating a release, CI installs the same pinned Node.js/npm publishing
+toolchain, explicitly runs `npm run prepublishOnly`, and validates the package with
+`npm pack --dry-run` on ordinary PRs and pushes. Packing avoids the duplicate-version
+errors that `npm publish --dry-run` can raise for the last published version.
+Keep the publishing versions in `.github/workflows/ci.yml` compatible when updating
+them; do not use `npm@latest` only in the release path. Registry version availability,
+authentication, and provenance still require a real publish to validate.
 
 **Commit types:**
 - `feat`: Minor version bump
 - `fix`: Patch version bump
 - `feat!` or `BREAKING CHANGE`: Major version bump
+
+#### Release Recovery
+
+If publishing fails after release-please has created the GitHub release, simply
+rerunning the job may not set `release_created` again. Relabeling the old release
+PR can also fail with `Resource not accessible by integration`: after workflow
+changes, `GITHUB_TOKEN` may lack permission to recreate a release at the old
+commit. A fresh release PR avoids this older-commit restriction.
+
+Only when the version has not been published to either registry, and a maintainer
+explicitly approves replacing the already-public Git tag:
+
+1. Push the workflow fix and wait for its CI checks to pass.
+2. Save the release metadata and original tag SHA, then delete the failed GitHub
+   release and tag.
+3. Clear `autorelease: pending` and `autorelease: tagged` from the original merged
+   release PR. A merged PR cannot be reopened.
+4. Reset only the failed version bump in `package.json`, `package-lock.json`,
+   `.release-please-manifest.json`, and `CHANGELOG.md`; retain the features and CI
+   fixes. Push with a `Release-As: <failed-version>` commit footer to request the
+   same version.
+5. Review the fresh release PR, ensuring its changelog starts at the last published
+   version and excludes earlier changes. Merge it, then verify that its normal CI run
+   publishes to both registries. The recreated tag will point to the new release
+   commit. Allow for registry processing delays before checking published metadata;
+   an initial 404 after a successful publish does not mean publication failed.
+
+Do not use this procedure after partial publication: registries do not allow
+overwriting an existing version. Prefer a new version whenever replacing the
+public tag is unacceptable or package sources need changing.
+After partial publication, complete only the missing registry without republishing
+the successful one or changing the release tag.
 
 ### Architecture
 
